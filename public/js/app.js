@@ -149,14 +149,26 @@ var __makeRelativeRequire = function(require, mappings, pref) {
   }
 };
 require.register("BattleWave.coffee", function(exports, require, module) {
-'use strict';
-var BattleWave, Clock;
+"use strict";
+var BattleWave, Clock, ScreenSpace, Surface, WarpGrid;
 
 Clock = require('src/Clock');
 
+Surface = require('src/Surface');
+
+ScreenSpace = require('src/ScreenSpace');
+
+WarpGrid = require('src/WarpGrid');
+
 module.exports = BattleWave = (function() {
-  function BattleWave() {
+  function BattleWave(target1) {
+    this.target = target1;
     this.clock = new Clock();
+    this.surface = new Surface(this.target);
+    this.screen = new ScreenSpace(this.surface);
+    this.grid = new WarpGrid(this.surface.width(), this.surface.height());
+    this.surface.add(this.grid);
+    this.loopId = null;
   }
 
   BattleWave.prototype.deltaTime = function() {
@@ -164,12 +176,19 @@ module.exports = BattleWave = (function() {
   };
 
   BattleWave.prototype.start = function() {
-    return requestAnimationFrame(this.gameLoop.bind(this));
+    console.log('[BattleWave] Starting');
+    return this.loopId = requestAnimationFrame(this.gameLoop.bind(this));
+  };
+
+  BattleWave.prototype.stop = function() {
+    console.log('[BattleWave] Stopping');
+    return cancelAnimationFrame(this.loopId);
   };
 
   BattleWave.prototype.gameLoop = function() {
-    console.log("TimeSinceLastFrame: " + (this.deltaTime()));
-    return requestAnimationFrame(this.gameLoop.bind(this));
+    this.surface.clear();
+    this.surface.render();
+    return this.loopId = requestAnimationFrame(this.gameLoop.bind(this));
   };
 
   return BattleWave;
@@ -177,8 +196,11 @@ module.exports = BattleWave = (function() {
 })();
 
 document.addEventListener('DOMContentLoaded', function() {
-  var bw;
-  return bw = new BattleWave();
+  var bw, target;
+  console.log('[BattleWave] Initializing');
+  target = document.getElementById('target');
+  bw = new BattleWave(target);
+  return bw.start();
 });
 
 });
@@ -199,7 +221,7 @@ module.exports = Clock = (function() {
     now = getCurrentTime();
     delta = now - this.time;
     this.time = now;
-    return delta;
+    return delta / 1000;
   };
 
   getCurrentTime = function() {
@@ -207,6 +229,184 @@ module.exports = Clock = (function() {
   };
 
   return Clock;
+
+})();
+
+});
+
+require.register("src/Drawable.coffee", function(exports, require, module) {
+"use strict";
+var Drawable;
+
+module.exports = Drawable = (function() {
+  function Drawable() {
+    null;
+  }
+
+  Drawable.prototype.draw = function(surface) {
+    return null;
+  };
+
+  return Drawable;
+
+})();
+
+});
+
+require.register("src/ScreenSpace.coffee", function(exports, require, module) {
+"use strict";
+var Drawable, ScreenSpace,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+Drawable = require('src/Drawable');
+
+module.exports = ScreenSpace = (function(superClass) {
+  extend(ScreenSpace, superClass);
+
+  function ScreenSpace(surface) {
+    this.surface = surface;
+    this.width = 0;
+  }
+
+  ScreenSpace.prototype.draw = function() {
+    return void 0;
+  };
+
+  return ScreenSpace;
+
+})(Drawable);
+
+});
+
+require.register("src/Surface.coffee", function(exports, require, module) {
+"use strict";
+var Surface;
+
+module.exports = Surface = (function() {
+  var registerResize, resizeScene;
+
+  function Surface(target) {
+    this.renderer = new THREE.WebGLRenderer();
+    this.renderer.setClearColor(0x1A1A1A, 1);
+    this.renderer.autoClear = false;
+    this.createScene();
+    this.setupComposer();
+    (registerResize.bind(this))();
+    (resizeScene.bind(this))(window);
+    target.appendChild(this.renderer.domElement);
+  }
+
+  Surface.prototype.createScene = function() {
+    console.log('[Surface] Creating scene');
+    this.camera = new THREE.PerspectiveCamera(45, this.width(), this.height(), 0.1, 10000);
+    this.scene = new THREE.Scene();
+    this.scene.add(this.camera);
+    this.light = new THREE.AmbientLight(0xFFFFFF);
+    this.scene.add(this.light);
+    this.axis = new THREE.AxisHelper(75);
+    this.scene.add(this.axis);
+    this.cube = new THREE.Mesh(new THREE.CubeGeometry(200, 200, 200), new THREE.MeshNormalMaterial());
+    return this.scene.add(this.cube);
+  };
+
+  Surface.prototype.setupComposer = function() {
+    var copy;
+    console.log('[Surface] Setting up composer');
+    this.composer = new THREE.EffectComposer(this.renderer);
+    this.composer.addPass(new THREE.RenderPass(this.scene, this.camera));
+    this.fxaa = new THREE.ShaderPass(THREE.FXAAShader);
+    this.fxaa.uniforms['resolution'].value = new THREE.Vector2(1 / this.width(), 1 / this.height());
+    this.composer.addPass(this.fxaa);
+    copy = new THREE.ShaderPass(THREE.CopyShader);
+    copy.renderToScreen = true;
+    return this.composer.addPass(copy);
+  };
+
+  Surface.prototype.width = function() {
+    return window.innerWidth;
+  };
+
+  Surface.prototype.height = function() {
+    return window.innerHeight;
+  };
+
+  Surface.prototype.clear = function() {
+    return this.renderer.clear();
+  };
+
+  Surface.prototype.add = function(obj) {
+    console.log("[Surface] Adding object " + (obj.inner().type));
+    return this.scene.add(obj.inner());
+  };
+
+  Surface.prototype.render = function() {
+    return this.composer.render();
+  };
+
+  resizeScene = function(win) {
+    var height, width;
+    console.log('[Surface] Resizing');
+    height = win.innerHeight;
+    width = win.innerWidth;
+    this.cube.position.x = width / 2;
+    this.cube.position.y = 0;
+    this.cube.position.z = height / 2;
+    this.camera.position.x = width / 2;
+    this.camera.position.y = 800;
+    this.camera.position.z = height / 2;
+    this.camera.lookAt(new THREE.Vector3(width / 2, 0, height / 2));
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(width, height);
+    this.composer.setSize(width, height);
+    if (this.fxaa) {
+      return this.fxaa.uniforms['resolution'].value = new THREE.Vector2(1 / width, 1 / height);
+    }
+  };
+
+  registerResize = function() {
+    var _this;
+    _this = this;
+    return window.addEventListener('resize', function(e) {
+      return (resizeScene.bind(_this))(e.target);
+    });
+  };
+
+  return Surface;
+
+})();
+
+});
+
+require.register("src/WarpGrid.coffee", function(exports, require, module) {
+"use strict";
+var WarpGrid;
+
+module.exports = WarpGrid = (function() {
+  var GRID_COUNT;
+
+  GRID_COUNT = 150;
+
+  function WarpGrid(width, height) {
+    var i, j, ref, ref1, x, z;
+    this.geo = new THREE.Geometry();
+    for (z = i = 0, ref = GRID_COUNT; 0 <= ref ? i <= ref : i >= ref; z = 0 <= ref ? ++i : --i) {
+      for (x = j = 0, ref1 = GRID_COUNT; 0 <= ref1 ? j <= ref1 : j >= ref1; x = 0 <= ref1 ? ++j : --j) {
+        this.geo.vertices.push(new THREE.Vector3(x * (width / GRID_COUNT), 0, z * (width / GRID_COUNT)));
+      }
+    }
+    this.lines = new THREE.Line(this.geo, new THREE.LineBasicMaterial({
+      color: 0xFFFFFF,
+      linewidth: 1
+    }));
+  }
+
+  WarpGrid.prototype.inner = function() {
+    return this.lines;
+  };
+
+  return WarpGrid;
 
 })();
 

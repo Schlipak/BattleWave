@@ -8,7 +8,7 @@ module.exports = class Clock
     now   = getCurrentTime()
     delta = now - @time
     @time = now
-    delta
+    delta / 1000
 
   getCurrentTime = () ->
     (new Date()).getTime()

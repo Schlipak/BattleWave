@@ -149,9 +149,66 @@ var __makeRelativeRequire = function(require, mappings, pref) {
   }
 };
 require.register("BattleWave.coffee", function(exports, require, module) {
+'use strict';
+var BattleWave, Clock;
+
+Clock = require('src/Clock');
+
+module.exports = BattleWave = (function() {
+  function BattleWave() {
+    this.clock = new Clock();
+  }
+
+  BattleWave.prototype.deltaTime = function() {
+    return this.clock.deltaTime();
+  };
+
+  BattleWave.prototype.start = function() {
+    return requestAnimationFrame(this.gameLoop.bind(this));
+  };
+
+  BattleWave.prototype.gameLoop = function() {
+    console.log("TimeSinceLastFrame: " + (this.deltaTime()));
+    return requestAnimationFrame(this.gameLoop.bind(this));
+  };
+
+  return BattleWave;
+
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
-  return console.log('It works');
+  var bw;
+  return bw = new BattleWave();
 });
+
+});
+
+require.register("src/Clock.coffee", function(exports, require, module) {
+"use strict";
+var Clock;
+
+module.exports = Clock = (function() {
+  var getCurrentTime;
+
+  function Clock() {
+    this.time = getCurrentTime();
+  }
+
+  Clock.prototype.deltaTime = function() {
+    var delta, now;
+    now = getCurrentTime();
+    delta = now - this.time;
+    this.time = now;
+    return delta;
+  };
+
+  getCurrentTime = function() {
+    return (new Date()).getTime();
+  };
+
+  return Clock;
+
+})();
 
 });
 

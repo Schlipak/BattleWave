@@ -28,6 +28,12 @@ module.exports = class Wave
     return 0 unless @alive
     10
 
+  getHitbox: () ->
+    {
+      pos: @pos,
+      radius: 50
+    }
+
   draw: () ->
     timeSinceLastFrame = @clock.deltaTime()
 
@@ -37,6 +43,10 @@ module.exports = class Wave
 
     if @pos.y <= 0 or @pos.y >= window.innerHeight
       @velocity.y = -@velocity.y
+    if @pos.y <= 0
+      @pos.y = 0
+    if @pos.y >= window.innerHeight
+      @pos.y = window.innerHeight
 
     if @pos.x < 0 or @pos.x > window.innerWidth
       @alive = false

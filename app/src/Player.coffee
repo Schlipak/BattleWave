@@ -87,6 +87,12 @@ module.exports = class Player
     @pos.y = MARGIN if @pos.y < MARGIN
     @pos.y = window.innerHeight - MARGIN if @pos.y > window.innerHeight - MARGIN
 
+  getHitbox: () ->
+    {
+      pos: @pos,
+      radius: 50
+    }
+
   draw: (ctx) ->
     timeSinceLastFrame = @drawClock.deltaTime()
 

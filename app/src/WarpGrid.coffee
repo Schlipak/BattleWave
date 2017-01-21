@@ -8,23 +8,23 @@ module.exports = class WarpGrid
   type: "WarpGrid"
 
   constructor: (size) ->
-    @mouse = {
-      pos: {
-        x: -100,
-        y: -100
-      },
-      previous: {
-        x: -100,
-        y: -100
-      },
-      getSpeed: () ->
-        dx = @previous.x - @pos.x
-        dy = @previous.y - @pos.y
-        Math.min(
-          Math.sqrt(dx ** 2 + dy ** 2) / 6,
-          20
-        )
-    }
+    # @mouse = {
+    #   pos: {
+    #     x: -100,
+    #     y: -100
+    #   },
+    #   previous: {
+    #     x: -100,
+    #     y: -100
+    #   },
+    #   getSpeed: () ->
+    #     dx = @previous.x - @pos.x
+    #     dy = @previous.y - @pos.y
+    #     Math.min(
+    #       Math.sqrt(dx ** 2 + dy ** 2) / 6,
+    #       20
+    #     )
+    # }
     @particles = []
     for y in [0..WarpGrid.GRID_COUNT]
       row = []
@@ -49,20 +49,20 @@ module.exports = class WarpGrid
         row.push particle
       @particles.push row
 
-    _this = @
-    window.onmousemove = (e) ->
-      posx = e.clientX
-      posy = e.clientY
-      _this.mouse.previous.x = _this.mouse.pos.x
-      _this.mouse.previous.y = _this.mouse.pos.y
-      _this.mouse.pos.x = posx
-      _this.mouse.pos.y = posy
+    # _this = @
+    # window.onmousemove = (e) ->
+    #   posx = e.clientX
+    #   posy = e.clientY
+    #   _this.mouse.previous.x = _this.mouse.pos.x
+    #   _this.mouse.previous.y = _this.mouse.pos.y
+    #   _this.mouse.pos.x = posx
+    #   _this.mouse.pos.y = posy
 
-  stopPlayer: () ->
-    @mouse.previous.x = 0
-    @mouse.previous.y = 0
-    @mouse.pos.x = 0
-    @mouse.pos.y = 0
+  # stopMouse: () ->
+  #   @mouse.previous.x = 0
+  #   @mouse.previous.y = 0
+  #   @mouse.pos.x = 0
+  #   @mouse.pos.y = 0
 
   draw: (ctx, objs) ->
     for y in [0..WarpGrid.GRID_COUNT]

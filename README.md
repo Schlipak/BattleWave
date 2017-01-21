@@ -1,7 +1,1 @@
-# BattleWave
-
-BattleWave is a game made for the Global Game Jam 2017.
-
-## How to play
-
-*TODO*
+Files here will be copied as-is to public directory.

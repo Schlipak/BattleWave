@@ -2,18 +2,12 @@
 
 Clock       = require 'src/Clock'
 Surface     = require 'src/Surface'
-ScreenSpace = require 'src/ScreenSpace'
 WarpGrid    = require 'src/WarpGrid'
 
 module.exports = class BattleWave
   constructor: (@target) ->
     @clock    = new Clock()
     @surface  = new Surface(@target)
-    @screen   = new ScreenSpace(@surface)
-    @grid     = new WarpGrid(
-      @surface.width(), @surface.height()
-    )
-    @surface.add @grid
     @loopId   = null
 
   deltaTime: () -> @clock.deltaTime()

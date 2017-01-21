@@ -1,90 +1,87 @@
 "use strict"
 
 module.exports = class WarpGrid
-  GRID_COUNT = 50
+  @GRID_COUNT = 50
 
   type: "WarpGrid"
 
   constructor: (size) ->
     @points = []
-    @lines = []
-    for z in [0..GRID_COUNT]
+    for y in [0..WarpGrid.GRID_COUNT]
       row = []
-      for x in [0..GRID_COUNT]
-        row.push new THREE.Vector3(
-          x * (size / GRID_COUNT),
-          0,
-          z * (size / GRID_COUNT)
-        )
+      for x in [0..WarpGrid.GRID_COUNT]
+        xcoord = x * (size / WarpGrid.GRID_COUNT)
+        ycoord = y * (size / WarpGrid.GRID_COUNT)
+        row.push {
+          x: x,
+          y: y,
+          originX: xcoord,
+          originY: ycoord,
+          currentX: xcoord,
+          currentY: ycoord,
+          weight: 0
+        }
       @points.push row
-    for z in [0..GRID_COUNT]
-      row = []
-      for x in [1..GRID_COUNT]
-        lineGeo = new THREE.Geometry()
-        lineGeo.vertices.push(
-          @points[z][x - 1]
-          @points[z][x]
-        )
-        line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial(
-          color: 0xFFFFFF,
-          linewidth: 2
-        ))
-        line.position.y = 0
-        row.push line
-      @lines.push row
-    for x in [0..GRID_COUNT]
-      column = []
-      for z in [1..GRID_COUNT]
-        lineGeo = new THREE.Geometry()
-        lineGeo.vertices.push(
-          @points[z - 1][x]
-          @points[z][x]
-        )
-        line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial(
-          color: 0xFFFFFF,
-          linewidth: 2
-        ))
-        line.position.y = 0
-        column.push line
-      @lines.push column
 
-    # @lines[30][30].geometry.vertices[1].y = 100
-    # @geo = new THREE.Geometry()
-    # for z in [0..GRID_COUNT]
-    #   for x in [0..GRID_COUNT]
-    #     if z % 2 == 0
-    #       @geo.vertices.push(new THREE.Vector3(
-    #         x * (size / GRID_COUNT),
-    #         0,
-    #         z * (size / GRID_COUNT)
-    #       ))
-    #     else
-    #       @geo.vertices.push(new THREE.Vector3(
-    #         size - (x * (size / GRID_COUNT)),
-    #         0,
-    #         z * (size / GRID_COUNT)
-    #       ))
-    # for x in [GRID_COUNT..0]
-    #   for z in [GRID_COUNT..0]
-    #     if x % 2 == 0
-    #       @geo.vertices.push(new THREE.Vector3(
-    #         x * (size / GRID_COUNT),
-    #         0,
-    #         z * (size / GRID_COUNT)
-    #       ))
-    #     else
-    #       @geo.vertices.push(new THREE.Vector3(
-    #         x * (size / GRID_COUNT),
-    #         0,
-    #         size - (z * (size / GRID_COUNT))
-    #       ))
-    # @lines = new THREE.Line(@geo, new THREE.LineBasicMaterial(
-    #   color: 0xFFFFFF
-    #   linewidth: 2
-    # ))
-    # @lines.position.y = 0
+  dist = (left, right) ->
+    dx = (right.originX - left.originX) / WarpGrid.GRID_COUNT
+    dy = (right.originY - left.originY) / WarpGrid.GRID_COUNT
+    {
+      dx: dx,
+      dy: dy,
+      dist: Math.sqrt(dx * dx + dy * dy)
+    }
 
-  add: (scene) ->
-    for row in @lines
-      for line in row
-        scene.add line
+  setWavePoint: (origin) ->
+    for row in @points
+      for pt in row
+        distance = dist(origin, pt)
+        pt.weight = 100 - (Math.abs(distance.dist) * 30)
+        pt.weight = 0 if pt.weight < 0
+
+        # pt.currentY = pt.originY + dy
+        # pt.currentX = pt.originX + dx
+
+  @computeColor: (ctx, left, right) ->
+    grad = ctx.createLinearGradient(
+      0, 0,
+      right.currentX - left.currentX,
+      right.currentY - left.currentY
+    )
+
+    hue = Math.round(280 - left.weight)
+    light = 40 + Math.round(left.weight * 0.6)
+    colLeft = tinycolor("hsl(#{hue}, #{light}%, #{light}%)").toHexString()
+
+    hue = Math.round(280 - right.weight)
+    light = 40 + Math.round(right.weight * 0.6)
+    colRight = tinycolor("hsl(#{hue}, #{light}%, #{light}%)").toHexString()
+
+    grad.addColorStop 0, colLeft
+    grad.addColorStop 1, colRight
+
+    grad
+
+  draw: (ctx) ->
+    ctx.lineWidth = 1
+    for row in @points
+      previous = row[0]
+      for pt in row
+        ctx.strokeStyle = WarpGrid.computeColor(ctx, previous, pt)
+        ctx.beginPath()
+        ctx.moveTo(previous.currentX, previous.currentY)
+        continue if pt == previous
+        ctx.lineTo(pt.currentX, pt.currentY)
+        ctx.stroke()
+        previous = pt
+    for x in [0..WarpGrid.GRID_COUNT]
+      previous = @points[0][x]
+      for y in [0..WarpGrid.GRID_COUNT]
+        pt = @points[y][x]
+        continue if pt == previous
+        ctx.strokeStyle = WarpGrid.computeColor(ctx, previous, pt)
+        ctx.beginPath()
+        ctx.moveTo(previous.currentX, previous.currentY)
+        ctx.lineTo(pt.currentX, pt.currentY)
+        ctx.stroke()
+        previous = pt

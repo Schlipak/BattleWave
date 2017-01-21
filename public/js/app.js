@@ -150,13 +150,11 @@ var __makeRelativeRequire = function(require, mappings, pref) {
 };
 require.register("BattleWave.coffee", function(exports, require, module) {
 "use strict";
-var BattleWave, Clock, ScreenSpace, Surface, WarpGrid;
+var BattleWave, Clock, Surface, WarpGrid;
 
 Clock = require('src/Clock');
 
 Surface = require('src/Surface');
-
-ScreenSpace = require('src/ScreenSpace');
 
 WarpGrid = require('src/WarpGrid');
 
@@ -165,9 +163,6 @@ module.exports = BattleWave = (function() {
     this.target = target1;
     this.clock = new Clock();
     this.surface = new Surface(this.target);
-    this.screen = new ScreenSpace(this.surface);
-    this.grid = new WarpGrid(this.surface.width(), this.surface.height());
-    this.surface.add(this.grid);
     this.loopId = null;
   }
 
@@ -234,125 +229,69 @@ module.exports = Clock = (function() {
 
 });
 
-require.register("src/Drawable.coffee", function(exports, require, module) {
-"use strict";
-var Drawable;
-
-module.exports = Drawable = (function() {
-  function Drawable() {
-    null;
-  }
-
-  Drawable.prototype.draw = function(surface) {
-    return null;
-  };
-
-  return Drawable;
-
-})();
-
-});
-
-require.register("src/ScreenSpace.coffee", function(exports, require, module) {
-"use strict";
-var Drawable, ScreenSpace,
-  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  hasProp = {}.hasOwnProperty;
-
-Drawable = require('src/Drawable');
-
-module.exports = ScreenSpace = (function(superClass) {
-  extend(ScreenSpace, superClass);
-
-  function ScreenSpace(surface) {
-    this.surface = surface;
-    this.width = 0;
-  }
-
-  ScreenSpace.prototype.draw = function() {
-    return void 0;
-  };
-
-  return ScreenSpace;
-
-})(Drawable);
-
-});
-
 require.register("src/Surface.coffee", function(exports, require, module) {
 "use strict";
-var Surface;
+var Surface, WarpGrid;
+
+WarpGrid = require('src/WarpGrid');
 
 module.exports = Surface = (function() {
   var registerResize, resizeScene;
 
   function Surface(target) {
-    this.renderer = new THREE.WebGLRenderer();
-    this.renderer.setClearColor(0x1A1A1A, 1);
-    this.renderer.autoClear = false;
-    this.createScene();
+    var _this;
+    this.canvas = document.createElement('CANVAS');
+    target.appendChild(this.canvas);
+    this.context = this.canvas.getContext('2d');
+    this.objects = [];
     this.setupComposer();
     (registerResize.bind(this))();
     (resizeScene.bind(this))(window);
-    target.appendChild(this.renderer.domElement);
+    this.grid = new WarpGrid(this.width(), this.height());
+    this.add(this.grid);
+    _this = this;
+    this.canvas.onmousemove = function(e) {
+      var posx, posy;
+      posx = e.clientX;
+      posy = e.clientY;
+      return _this.grid.setWavePoint({
+        originX: posx,
+        originY: posy
+      });
+    };
   }
 
-  Surface.prototype.createScene = function() {
-    console.log('[Surface] Creating scene');
-    this.gridCam = new THREE.PerspectiveCamera(90, this.width(), this.height(), 0.1, 10000);
-    this.gridScene = new THREE.Scene();
-    this.gridScene.add(this.gridCam);
-    this.light = new THREE.AmbientLight(0xFFFFFF);
-    this.gridScene.add(this.light);
-    this.objectScene = new THREE.Scene();
-    this.objectCam = new THREE.PerspectiveCamera(90, this.width(), this.height(), 0.1, 10000);
-    this.objectScene.add(this.objectCam);
-    this.objectScene.add(this.light);
-    this.cube = new THREE.Mesh(new THREE.CubeGeometry(200, 200, 200), new THREE.MeshNormalMaterial());
-    return this.objectScene.add(this.cube);
-  };
-
   Surface.prototype.setupComposer = function() {
-    var copy;
-    console.log('[Surface] Setting up composer');
-    this.gridComposer = new THREE.EffectComposer(this.renderer);
-    this.gridComposer.addPass(new THREE.RenderPass(this.gridScene, this.gridCam));
-    this.rgbShift = new THREE.ShaderPass(THREE.RGBShiftShader);
-    this.rgbShift.uniforms['amount'].value = 0.0014;
-    this.gridComposer.addPass(this.rgbShift);
-    this.fxaa = new THREE.ShaderPass(THREE.FXAAShader);
-    this.fxaa.uniforms['resolution'].value = new THREE.Vector2(1 / this.width(), 1 / this.height());
-    this.gridComposer.addPass(this.fxaa);
-    copy = new THREE.ShaderPass(THREE.CopyShader);
-    copy.renderToScreen = true;
-    this.gridComposer.addPass(copy);
-    this.objComposer = new THREE.EffectComposer(this.renderer);
-    this.objComposer.addPass(new THREE.RenderPass(this.objectScene, this.objectCam));
-    copy = new THREE.ShaderPass(THREE.CopyShader);
-    copy.renderToScreen = true;
-    return this.objComposer.addPass(copy);
+    return console.log('[Surface] Setting up composer');
   };
 
   Surface.prototype.width = function() {
-    return window.innerWidth;
+    return this.canvas.width;
   };
 
   Surface.prototype.height = function() {
-    return window.innerHeight;
+    return this.canvas.height;
   };
 
   Surface.prototype.clear = function() {
-    return this.renderer.clear();
+    return this.context.clearRect(0, 0, this.width(), this.height());
   };
 
   Surface.prototype.add = function(obj) {
-    console.log("[Surface] Adding object " + obj.type);
-    return obj.add(this.gridScene);
+    return this.objects.push(obj);
   };
 
   Surface.prototype.render = function() {
-    this.gridComposer.render();
-    return this.objComposer.render();
+    var i, len, obj, ref, results;
+    this.context.fillStyle = '#212121';
+    this.context.fillRect(0, 0, this.width(), this.height());
+    ref = this.objects;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      obj = ref[i];
+      results.push(obj.draw(this.context));
+    }
+    return results;
   };
 
   resizeScene = function(win) {
@@ -360,28 +299,8 @@ module.exports = Surface = (function() {
     console.log('[Surface] Resizing');
     height = win.innerHeight;
     width = win.innerWidth;
-    this.cube.position.x = width / 3;
-    this.cube.position.y = 0;
-    this.cube.position.z = (height / 2) + 1;
-    this.cube.rotation.y = Math.PI / 4;
-    this.gridCam.position.x = width / 2;
-    this.gridCam.position.y = 900;
-    this.gridCam.position.z = height / 2;
-    this.gridCam.lookAt(new THREE.Vector3(width / 2, 0, height / 2));
-    this.gridCam.aspect = width / height;
-    this.gridCam.updateProjectionMatrix();
-    this.objectCam.position.x = width / 2;
-    this.objectCam.position.y = 900;
-    this.objectCam.position.z = height / 2;
-    this.objectCam.lookAt(new THREE.Vector3(width / 2, 0, height / 2));
-    this.objectCam.aspect = width / height;
-    this.objectCam.updateProjectionMatrix();
-    this.renderer.setSize(width, height);
-    this.gridComposer.setSize(width, height);
-    this.objComposer.setSize(width, height);
-    if (this.fxaa) {
-      return this.fxaa.uniforms['resolution'].value = new THREE.Vector2(1 / width, 1 / height);
-    }
+    this.canvas.width = width;
+    return this.canvas.height = height;
   };
 
   registerResize = function() {
@@ -403,56 +322,48 @@ require.register("src/WarpGrid.coffee", function(exports, require, module) {
 var WarpGrid;
 
 module.exports = WarpGrid = (function() {
-  var GRID_COUNT;
+  var dist;
 
-  GRID_COUNT = 50;
+  WarpGrid.GRID_COUNT = 50;
 
   WarpGrid.prototype.type = "WarpGrid";
 
   function WarpGrid(size) {
-    var column, i, j, k, l, line, lineGeo, m, n, ref, ref1, ref2, ref3, ref4, ref5, row, x, z;
+    var i, j, ref, ref1, row, x, xcoord, y, ycoord;
     this.points = [];
-    this.lines = [];
-    for (z = i = 0, ref = GRID_COUNT; 0 <= ref ? i <= ref : i >= ref; z = 0 <= ref ? ++i : --i) {
+    for (y = i = 0, ref = WarpGrid.GRID_COUNT; 0 <= ref ? i <= ref : i >= ref; y = 0 <= ref ? ++i : --i) {
       row = [];
-      for (x = j = 0, ref1 = GRID_COUNT; 0 <= ref1 ? j <= ref1 : j >= ref1; x = 0 <= ref1 ? ++j : --j) {
-        row.push(new THREE.Vector3(x * (size / GRID_COUNT), 0, z * (size / GRID_COUNT)));
+      for (x = j = 0, ref1 = WarpGrid.GRID_COUNT; 0 <= ref1 ? j <= ref1 : j >= ref1; x = 0 <= ref1 ? ++j : --j) {
+        xcoord = x * (size / WarpGrid.GRID_COUNT);
+        ycoord = y * (size / WarpGrid.GRID_COUNT);
+        row.push({
+          x: x,
+          y: y,
+          originX: xcoord,
+          originY: ycoord,
+          currentX: xcoord,
+          currentY: ycoord,
+          weight: 0
+        });
       }
       this.points.push(row);
     }
-    for (z = k = 0, ref2 = GRID_COUNT; 0 <= ref2 ? k <= ref2 : k >= ref2; z = 0 <= ref2 ? ++k : --k) {
-      row = [];
-      for (x = l = 1, ref3 = GRID_COUNT; 1 <= ref3 ? l <= ref3 : l >= ref3; x = 1 <= ref3 ? ++l : --l) {
-        lineGeo = new THREE.Geometry();
-        lineGeo.vertices.push(this.points[z][x - 1], this.points[z][x]);
-        line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({
-          color: 0xFFFFFF,
-          linewidth: 2
-        }));
-        line.position.y = 0;
-        row.push(line);
-      }
-      this.lines.push(row);
-    }
-    for (x = m = 0, ref4 = GRID_COUNT; 0 <= ref4 ? m <= ref4 : m >= ref4; x = 0 <= ref4 ? ++m : --m) {
-      column = [];
-      for (z = n = 1, ref5 = GRID_COUNT; 1 <= ref5 ? n <= ref5 : n >= ref5; z = 1 <= ref5 ? ++n : --n) {
-        lineGeo = new THREE.Geometry();
-        lineGeo.vertices.push(this.points[z - 1][x], this.points[z][x]);
-        line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({
-          color: 0xFFFFFF,
-          linewidth: 2
-        }));
-        line.position.y = 0;
-        column.push(line);
-      }
-      this.lines.push(column);
-    }
   }
 
-  WarpGrid.prototype.add = function(scene) {
-    var i, len, line, ref, results, row;
-    ref = this.lines;
+  dist = function(left, right) {
+    var dx, dy;
+    dx = (right.originX - left.originX) / WarpGrid.GRID_COUNT;
+    dy = (right.originY - left.originY) / WarpGrid.GRID_COUNT;
+    return {
+      dx: dx,
+      dy: dy,
+      dist: Math.sqrt(dx * dx + dy * dy)
+    };
+  };
+
+  WarpGrid.prototype.setWavePoint = function(origin) {
+    var distance, i, len, pt, ref, results, row;
+    ref = this.points;
     results = [];
     for (i = 0, len = ref.length; i < len; i++) {
       row = ref[i];
@@ -460,11 +371,75 @@ module.exports = WarpGrid = (function() {
         var j, len1, results1;
         results1 = [];
         for (j = 0, len1 = row.length; j < len1; j++) {
-          line = row[j];
-          results1.push(scene.add(line));
+          pt = row[j];
+          distance = dist(origin, pt);
+          pt.weight = 100 - (Math.abs(distance.dist) * 30);
+          if (pt.weight < 0) {
+            results1.push(pt.weight = 0);
+          } else {
+            results1.push(void 0);
+          }
         }
         return results1;
       })());
+    }
+    return results;
+  };
+
+  WarpGrid.computeColor = function(ctx, left, right) {
+    var colLeft, colRight, grad, hue, light;
+    grad = ctx.createLinearGradient(0, 0, right.currentX - left.currentX, right.currentY - left.currentY);
+    hue = Math.round(280 - left.weight);
+    light = 40 + Math.round(left.weight * 0.6);
+    colLeft = tinycolor("hsl(" + hue + ", " + light + "%, " + light + "%)").toHexString();
+    hue = Math.round(280 - right.weight);
+    light = 40 + Math.round(right.weight * 0.6);
+    colRight = tinycolor("hsl(" + hue + ", " + light + "%, " + light + "%)").toHexString();
+    grad.addColorStop(0, colLeft);
+    grad.addColorStop(1, colRight);
+    return grad;
+  };
+
+  WarpGrid.prototype.draw = function(ctx) {
+    var i, j, k, len, len1, previous, pt, ref, ref1, results, row, x, y;
+    ctx.lineWidth = 1;
+    ref = this.points;
+    for (i = 0, len = ref.length; i < len; i++) {
+      row = ref[i];
+      previous = row[0];
+      for (j = 0, len1 = row.length; j < len1; j++) {
+        pt = row[j];
+        ctx.strokeStyle = WarpGrid.computeColor(ctx, previous, pt);
+        ctx.beginPath();
+        ctx.moveTo(previous.currentX, previous.currentY);
+        if (pt === previous) {
+          continue;
+        }
+        ctx.lineTo(pt.currentX, pt.currentY);
+        ctx.stroke();
+        previous = pt;
+      }
+    }
+    results = [];
+    for (x = k = 0, ref1 = WarpGrid.GRID_COUNT; 0 <= ref1 ? k <= ref1 : k >= ref1; x = 0 <= ref1 ? ++k : --k) {
+      previous = this.points[0][x];
+      results.push((function() {
+        var l, ref2, results1;
+        results1 = [];
+        for (y = l = 0, ref2 = WarpGrid.GRID_COUNT; 0 <= ref2 ? l <= ref2 : l >= ref2; y = 0 <= ref2 ? ++l : --l) {
+          pt = this.points[y][x];
+          if (pt === previous) {
+            continue;
+          }
+          ctx.strokeStyle = WarpGrid.computeColor(ctx, previous, pt);
+          ctx.beginPath();
+          ctx.moveTo(previous.currentX, previous.currentY);
+          ctx.lineTo(pt.currentX, pt.currentY);
+          ctx.stroke();
+          results1.push(previous = pt);
+        }
+        return results1;
+      }).call(this));
     }
     return results;
   };

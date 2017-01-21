@@ -3,6 +3,7 @@
 Clock       = require 'src/Clock'
 Surface     = require 'src/Surface'
 WarpGrid    = require 'src/WarpGrid'
+Player      = require 'src/Player'
 
 window.CanvasRenderingContext2D.prototype.polygon = (x, y, radius, sides) ->
   if sides > 2
@@ -26,6 +27,14 @@ module.exports = class BattleWave
     @surface  = new Surface(@target)
     @loopId   = null
 
+    @playerOne = new Player(1)
+    @playerTwo = new Player(2)
+    @surface.add(@playerOne)
+    @surface.add(@playerTwo)
+
+    keyboard = []
+    window.$keyboard = keyboard
+
   deltaTime: () -> @clock.deltaTime()
 
   start: () ->
@@ -46,3 +55,9 @@ document.addEventListener 'DOMContentLoaded', () ->
   target = document.getElementById 'target'
   bw = new BattleWave(target)
   bw.start()
+  window.addEventListener 'keydown', (e) ->
+    key = e.keyCode || e.which
+    window.$keyboard[key] = true
+  window.addEventListener 'keyup', (e) ->
+    key = e.keyCode || e.which
+    window.$keyboard[key] = false

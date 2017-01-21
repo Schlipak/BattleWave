@@ -150,13 +150,15 @@ var __makeRelativeRequire = function(require, mappings, pref) {
 };
 require.register("BattleWave.coffee", function(exports, require, module) {
 "use strict";
-var BattleWave, Clock, Surface, WarpGrid;
+var BattleWave, Clock, Player, Surface, WarpGrid;
 
 Clock = require('src/Clock');
 
 Surface = require('src/Surface');
 
 WarpGrid = require('src/WarpGrid');
+
+Player = require('src/Player');
 
 window.CanvasRenderingContext2D.prototype.polygon = function(x, y, radius, sides) {
   var angle, i, j, ref;
@@ -174,10 +176,17 @@ window.CanvasRenderingContext2D.prototype.polygon = function(x, y, radius, sides
 
 module.exports = BattleWave = (function() {
   function BattleWave(target1) {
+    var keyboard;
     this.target = target1;
     this.clock = new Clock();
     this.surface = new Surface(this.target);
     this.loopId = null;
+    this.playerOne = new Player(1);
+    this.playerTwo = new Player(2);
+    this.surface.add(this.playerOne);
+    this.surface.add(this.playerTwo);
+    keyboard = [];
+    window.$keyboard = keyboard;
   }
 
   BattleWave.prototype.deltaTime = function() {
@@ -209,7 +218,17 @@ document.addEventListener('DOMContentLoaded', function() {
   console.log('[BattleWave] Initializing');
   target = document.getElementById('target');
   bw = new BattleWave(target);
-  return bw.start();
+  bw.start();
+  window.addEventListener('keydown', function(e) {
+    var key;
+    key = e.keyCode || e.which;
+    return window.$keyboard[key] = true;
+  });
+  return window.addEventListener('keyup', function(e) {
+    var key;
+    key = e.keyCode || e.which;
+    return window.$keyboard[key] = false;
+  });
 });
 
 });
@@ -383,35 +402,143 @@ module.exports = Particle = (function() {
 
 require.register("src/Player.coffee", function(exports, require, module) {
 "use strict";
-var Player;
+var Clock, Player;
+
+Clock = require('src/Clock');
 
 module.exports = Player = (function() {
-  var setupControls;
+  var COLORS, KEYBOARD, MARGIN, SIZE;
+
+  MARGIN = 80;
+
+  SIZE = 50;
+
+  COLORS = ["#8e44ad", "#7755b8", "#6166c4", "#4a77cf", "#3489db"];
+
+  KEYBOARD = [
+    {
+      moveUp: [90, 87],
+      moveDown: [83]
+    }, {
+      moveUp: [38],
+      moveDown: [40]
+    }
+  ];
 
   function Player(playerNumber) {
     this.playerNumber = playerNumber;
     this.pos = {
       x: 0,
-      y: 0
+      y: MARGIN
     };
+    if (this.playerNumber === 1) {
+      this.pos.x = MARGIN;
+    } else {
+      this.pos.x = window.innerWidth - MARGIN;
+    }
     this.velocity = {
       x: 0,
       y: 0
     };
-    this.friction = 0.9;
-    (setupControls.bind(this))();
+    this.friction = 20;
+    this.angle = 0;
+    this.colors = COLORS;
+    if (this.playerNumber === 2) {
+      this.colors = Object.create(COLORS).reverse();
+    }
+    this.clock = new Clock();
   }
 
-  setupControls = function() {
-    return void 0;
+  Player.prototype.moveUp = function() {
+    this.velocity.y -= 50;
+    if (this.velocity.y < -400) {
+      return this.velocity.y = -400;
+    }
+  };
+
+  Player.prototype.moveDown = function() {
+    this.velocity.y += 50;
+    if (this.velocity.y > 400) {
+      return this.velocity.y = 400;
+    }
   };
 
   Player.prototype.update = function() {
-    return void 0;
+    var dir, kb, key, results;
+    kb = window.$keyboard;
+    results = [];
+    for (dir in KEYBOARD[this.playerNumber - 1]) {
+      results.push((function() {
+        var j, len, ref, results1;
+        ref = KEYBOARD[this.playerNumber - 1][dir];
+        results1 = [];
+        for (j = 0, len = ref.length; j < len; j++) {
+          key = ref[j];
+          if (kb[key]) {
+            this[dir]();
+            break;
+          } else {
+            results1.push(void 0);
+          }
+        }
+        return results1;
+      }).call(this));
+    }
+    return results;
+  };
+
+  Player.prototype.hasKeyPressed = function() {
+    var dir, j, key, len, ref;
+    for (dir in KEYBOARD[this.playerNumber - 1]) {
+      ref = KEYBOARD[this.playerNumber - 1][dir];
+      for (j = 0, len = ref.length; j < len; j++) {
+        key = ref[j];
+        if (window.$keyboard[key]) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  Player.prototype.clampYPos = function() {
+    if (this.pos.y < MARGIN) {
+      this.pos.y = MARGIN;
+    }
+    if (this.pos.y > window.innerHeight - MARGIN) {
+      return this.pos.y = window.innerHeight - MARGIN;
+    }
   };
 
   Player.prototype.draw = function(ctx) {
-    return void 0;
+    var i, j, ref, timeSinceLastFrame;
+    timeSinceLastFrame = this.clock.deltaTime();
+    this.angle += (Math.PI / 5) * timeSinceLastFrame;
+    this.angle = this.angle % (2 * Math.PI);
+    this.update();
+    this.pos.y += this.velocity.y * timeSinceLastFrame;
+    this.clampYPos();
+    if (!this.hasKeyPressed()) {
+      this.velocity.y *= this.friction * timeSinceLastFrame;
+    }
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 2;
+    ctx.translate(this.pos.x, this.pos.y);
+    for (i = j = 0, ref = SIZE / 10; 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
+      ctx.save();
+      if (i % 2 === 0) {
+        ctx.rotate(this.angle);
+      } else {
+        ctx.rotate(-this.angle);
+      }
+      ctx.beginPath();
+      ctx.strokeStyle = this.colors[i];
+      ctx.polygon(0, 0, SIZE - (i * 10), 6 - i);
+      ctx.stroke();
+      ctx.restore();
+    }
+    return ctx.restore();
   };
 
   return Player;
@@ -434,7 +561,6 @@ module.exports = Surface = (function() {
     target.appendChild(this.canvas);
     this.context = this.canvas.getContext('2d');
     this.objects = [];
-    this.setupComposer();
     (registerResize.bind(this))();
     (resizeScene.bind(this))(window);
     this.grid = new WarpGrid(this.width(), this.height());
@@ -443,10 +569,6 @@ module.exports = Surface = (function() {
     this.vignette.addColorStop(0, "transparent");
     this.vignette.addColorStop(1, "rgba(0, 0, 0, .4)");
   }
-
-  Surface.prototype.setupComposer = function() {
-    return console.log('[Surface] Setting up composer');
-  };
 
   Surface.prototype.width = function() {
     return this.canvas.width;

@@ -9,7 +9,6 @@ module.exports = class Surface
     @context = @canvas.getContext '2d'
 
     @objects = []
-    @setupComposer()
     (registerResize.bind(@))()
     (resizeScene.bind(@))(window)
 
@@ -27,9 +26,6 @@ module.exports = class Surface
     @vignette.addColorStop(0, "transparent")
     @vignette.addColorStop(1, "rgba(0, 0, 0, .4)")
 
-  setupComposer: () ->
-    console.log '[Surface] Setting up composer'
-
   width: () ->
     @canvas.width
 
@@ -39,7 +35,8 @@ module.exports = class Surface
   clear: () ->
     @context.clearRect(0, 0, @width(), @height())
 
-  add: (obj) -> @objects.push obj
+  add: (obj) ->
+    @objects.push obj
 
   render: () ->
     @context.save()

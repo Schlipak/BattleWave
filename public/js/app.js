@@ -299,28 +299,38 @@ module.exports = Surface = (function() {
 
   Surface.prototype.createScene = function() {
     console.log('[Surface] Creating scene');
-    this.camera = new THREE.PerspectiveCamera(45, this.width(), this.height(), 0.1, 10000);
-    this.scene = new THREE.Scene();
-    this.scene.add(this.camera);
+    this.gridCam = new THREE.PerspectiveCamera(90, this.width(), this.height(), 0.1, 10000);
+    this.gridScene = new THREE.Scene();
+    this.gridScene.add(this.gridCam);
     this.light = new THREE.AmbientLight(0xFFFFFF);
-    this.scene.add(this.light);
-    this.axis = new THREE.AxisHelper(75);
-    this.scene.add(this.axis);
+    this.gridScene.add(this.light);
+    this.objectScene = new THREE.Scene();
+    this.objectCam = new THREE.PerspectiveCamera(90, this.width(), this.height(), 0.1, 10000);
+    this.objectScene.add(this.objectCam);
+    this.objectScene.add(this.light);
     this.cube = new THREE.Mesh(new THREE.CubeGeometry(200, 200, 200), new THREE.MeshNormalMaterial());
-    return this.scene.add(this.cube);
+    return this.objectScene.add(this.cube);
   };
 
   Surface.prototype.setupComposer = function() {
     var copy;
     console.log('[Surface] Setting up composer');
-    this.composer = new THREE.EffectComposer(this.renderer);
-    this.composer.addPass(new THREE.RenderPass(this.scene, this.camera));
+    this.gridComposer = new THREE.EffectComposer(this.renderer);
+    this.gridComposer.addPass(new THREE.RenderPass(this.gridScene, this.gridCam));
+    this.rgbShift = new THREE.ShaderPass(THREE.RGBShiftShader);
+    this.rgbShift.uniforms['amount'].value = 0.0014;
+    this.gridComposer.addPass(this.rgbShift);
     this.fxaa = new THREE.ShaderPass(THREE.FXAAShader);
     this.fxaa.uniforms['resolution'].value = new THREE.Vector2(1 / this.width(), 1 / this.height());
-    this.composer.addPass(this.fxaa);
+    this.gridComposer.addPass(this.fxaa);
     copy = new THREE.ShaderPass(THREE.CopyShader);
     copy.renderToScreen = true;
-    return this.composer.addPass(copy);
+    this.gridComposer.addPass(copy);
+    this.objComposer = new THREE.EffectComposer(this.renderer);
+    this.objComposer.addPass(new THREE.RenderPass(this.objectScene, this.objectCam));
+    copy = new THREE.ShaderPass(THREE.CopyShader);
+    copy.renderToScreen = true;
+    return this.objComposer.addPass(copy);
   };
 
   Surface.prototype.width = function() {
@@ -336,12 +346,13 @@ module.exports = Surface = (function() {
   };
 
   Surface.prototype.add = function(obj) {
-    console.log("[Surface] Adding object " + (obj.inner().type));
-    return this.scene.add(obj.inner());
+    console.log("[Surface] Adding object " + obj.type);
+    return obj.add(this.gridScene);
   };
 
   Surface.prototype.render = function() {
-    return this.composer.render();
+    this.gridComposer.render();
+    return this.objComposer.render();
   };
 
   resizeScene = function(win) {
@@ -349,17 +360,25 @@ module.exports = Surface = (function() {
     console.log('[Surface] Resizing');
     height = win.innerHeight;
     width = win.innerWidth;
-    this.cube.position.x = width / 2;
+    this.cube.position.x = width / 3;
     this.cube.position.y = 0;
-    this.cube.position.z = height / 2;
-    this.camera.position.x = width / 2;
-    this.camera.position.y = 800;
-    this.camera.position.z = height / 2;
-    this.camera.lookAt(new THREE.Vector3(width / 2, 0, height / 2));
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
+    this.cube.position.z = (height / 2) + 1;
+    this.cube.rotation.y = Math.PI / 4;
+    this.gridCam.position.x = width / 2;
+    this.gridCam.position.y = 900;
+    this.gridCam.position.z = height / 2;
+    this.gridCam.lookAt(new THREE.Vector3(width / 2, 0, height / 2));
+    this.gridCam.aspect = width / height;
+    this.gridCam.updateProjectionMatrix();
+    this.objectCam.position.x = width / 2;
+    this.objectCam.position.y = 900;
+    this.objectCam.position.z = height / 2;
+    this.objectCam.lookAt(new THREE.Vector3(width / 2, 0, height / 2));
+    this.objectCam.aspect = width / height;
+    this.objectCam.updateProjectionMatrix();
     this.renderer.setSize(width, height);
-    this.composer.setSize(width, height);
+    this.gridComposer.setSize(width, height);
+    this.objComposer.setSize(width, height);
     if (this.fxaa) {
       return this.fxaa.uniforms['resolution'].value = new THREE.Vector2(1 / width, 1 / height);
     }
@@ -386,24 +405,68 @@ var WarpGrid;
 module.exports = WarpGrid = (function() {
   var GRID_COUNT;
 
-  GRID_COUNT = 150;
+  GRID_COUNT = 50;
 
-  function WarpGrid(width, height) {
-    var i, j, ref, ref1, x, z;
-    this.geo = new THREE.Geometry();
+  WarpGrid.prototype.type = "WarpGrid";
+
+  function WarpGrid(size) {
+    var column, i, j, k, l, line, lineGeo, m, n, ref, ref1, ref2, ref3, ref4, ref5, row, x, z;
+    this.points = [];
+    this.lines = [];
     for (z = i = 0, ref = GRID_COUNT; 0 <= ref ? i <= ref : i >= ref; z = 0 <= ref ? ++i : --i) {
+      row = [];
       for (x = j = 0, ref1 = GRID_COUNT; 0 <= ref1 ? j <= ref1 : j >= ref1; x = 0 <= ref1 ? ++j : --j) {
-        this.geo.vertices.push(new THREE.Vector3(x * (width / GRID_COUNT), 0, z * (width / GRID_COUNT)));
+        row.push(new THREE.Vector3(x * (size / GRID_COUNT), 0, z * (size / GRID_COUNT)));
       }
+      this.points.push(row);
     }
-    this.lines = new THREE.Line(this.geo, new THREE.LineBasicMaterial({
-      color: 0xFFFFFF,
-      linewidth: 1
-    }));
+    for (z = k = 0, ref2 = GRID_COUNT; 0 <= ref2 ? k <= ref2 : k >= ref2; z = 0 <= ref2 ? ++k : --k) {
+      row = [];
+      for (x = l = 1, ref3 = GRID_COUNT; 1 <= ref3 ? l <= ref3 : l >= ref3; x = 1 <= ref3 ? ++l : --l) {
+        lineGeo = new THREE.Geometry();
+        lineGeo.vertices.push(this.points[z][x - 1], this.points[z][x]);
+        line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({
+          color: 0xFFFFFF,
+          linewidth: 2
+        }));
+        line.position.y = 0;
+        row.push(line);
+      }
+      this.lines.push(row);
+    }
+    for (x = m = 0, ref4 = GRID_COUNT; 0 <= ref4 ? m <= ref4 : m >= ref4; x = 0 <= ref4 ? ++m : --m) {
+      column = [];
+      for (z = n = 1, ref5 = GRID_COUNT; 1 <= ref5 ? n <= ref5 : n >= ref5; z = 1 <= ref5 ? ++n : --n) {
+        lineGeo = new THREE.Geometry();
+        lineGeo.vertices.push(this.points[z - 1][x], this.points[z][x]);
+        line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({
+          color: 0xFFFFFF,
+          linewidth: 2
+        }));
+        line.position.y = 0;
+        column.push(line);
+      }
+      this.lines.push(column);
+    }
   }
 
-  WarpGrid.prototype.inner = function() {
-    return this.lines;
+  WarpGrid.prototype.add = function(scene) {
+    var i, len, line, ref, results, row;
+    ref = this.lines;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      row = ref[i];
+      results.push((function() {
+        var j, len1, results1;
+        results1 = [];
+        for (j = 0, len1 = row.length; j < len1; j++) {
+          line = row[j];
+          results1.push(scene.add(line));
+        }
+        return results1;
+      })());
+    }
+    return results;
   };
 
   return WarpGrid;

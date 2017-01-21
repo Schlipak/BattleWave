@@ -8,9 +8,20 @@
   <link rel="stylesheet" href="/css/app.css" />
 </head>
 <body>
-  <canvas id="game"></canvas>
+  <div id="target"></div>
 
+  <!-- THREE -->
   <script type="application/javascript" src="/vendor/three.min.js"></script>
+
+  <!-- Shaders -->
+  <script type="application/javascript" src="/vendor/EffectComposer.js"></script>
+  <script type="application/javascript" src="/vendor/CopyShader.js"></script>
+  <script type="application/javascript" src="/vendor/RenderPass.js"></script>
+  <script type="application/javascript" src="/vendor/ShaderPass.js"></script>
+  <script type="application/javascript" src="/vendor/FXAAShader.js"></script>
+  <script type="application/javascript" src="/vendor/RGBShiftShader.js"></script>
+
+  <!-- APP -->
   <script type="application/javascript" src="/js/app.js"></script>
   <script>require('BattleWave');</script>
 </body>

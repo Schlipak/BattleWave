@@ -15,37 +15,52 @@ module.exports = class Surface
 
   createScene: () ->
     console.log '[Surface] Creating scene'
-    @camera = new THREE.PerspectiveCamera(
-      45, @width(), @height(),
+    @gridCam = new THREE.PerspectiveCamera(
+      90, @width(), @height(),
       0.1, 10000
     )
-    @scene = new THREE.Scene()
-    @scene.add @camera
+    @gridScene = new THREE.Scene()
+    @gridScene.add @gridCam
     @light = new THREE.AmbientLight(0xFFFFFF)
-    @scene.add @light
+    @gridScene.add @light
 
-    @axis = new THREE.AxisHelper(75)
-    @scene.add @axis
-
+    @objectScene = new THREE.Scene()
+    @objectCam = new THREE.PerspectiveCamera(
+      90, @width(), @height(),
+      0.1, 10000
+    )
+    @objectScene.add @objectCam
+    @objectScene.add @light
     @cube = new THREE.Mesh(
       new THREE.CubeGeometry(200, 200, 200),
       new THREE.MeshNormalMaterial()
     )
-    @scene.add @cube
-
+    @objectScene.add @cube
 
   setupComposer: () ->
     console.log '[Surface] Setting up composer'
-    @composer = new THREE.EffectComposer(@renderer)
-    @composer.addPass(new THREE.RenderPass(@scene, @camera))
+
+    @gridComposer = new THREE.EffectComposer(@renderer)
+    @gridComposer.addPass(new THREE.RenderPass(@gridScene, @gridCam))
+    @rgbShift = new THREE.ShaderPass(THREE.RGBShiftShader)
+    @rgbShift.uniforms['amount'].value = 0.0014
+    @gridComposer.addPass(@rgbShift)
     @fxaa = new THREE.ShaderPass(THREE.FXAAShader)
     @fxaa.uniforms['resolution'].value = new THREE.Vector2(
       1 / @width(), 1 / @height()
     )
-    @composer.addPass(@fxaa)
+    @gridComposer.addPass(@fxaa)
     copy = new THREE.ShaderPass(THREE.CopyShader)
     copy.renderToScreen = true
-    @composer.addPass(copy)
+    @gridComposer.addPass(copy)
+
+    @objComposer = new THREE.EffectComposer(@renderer)
+    @objComposer.addPass(
+      new THREE.RenderPass(@objectScene, @objectCam)
+    )
+    copy = new THREE.ShaderPass(THREE.CopyShader)
+    copy.renderToScreen = true
+    @objComposer.addPass(copy)
 
   width: () ->
     window.innerWidth
@@ -56,33 +71,44 @@ module.exports = class Surface
   clear: () -> @renderer.clear()
 
   add: (obj) ->
-    console.log "[Surface] Adding object #{obj.inner().type}"
-    @scene.add obj.inner()
+    console.log "[Surface] Adding object #{obj.type}"
+    obj.add(@gridScene)
 
   render: () ->
-    # @camera.rotation.y += 0.001
-    @composer.render()
+    @gridComposer.render()
+    @objComposer.render()
 
   resizeScene = (win) ->
     console.log '[Surface] Resizing'
     height  = win.innerHeight
     width   = win.innerWidth
 
-    @cube.position.x = width / 2
+    @cube.position.x = width / 3
     @cube.position.y = 0
-    @cube.position.z = height / 2
+    @cube.position.z = (height / 2) + 1
+    @cube.rotation.y = Math.PI / 4
 
-    @camera.position.x = width / 2
-    @camera.position.y = 800
-    @camera.position.z = height / 2
-    @camera.lookAt new THREE.Vector3(
+    @gridCam.position.x = width / 2
+    @gridCam.position.y = 900
+    @gridCam.position.z = height / 2
+    @gridCam.lookAt new THREE.Vector3(
       width / 2, 0, height / 2
     )
-    @camera.aspect = width / height
-    @camera.updateProjectionMatrix()
+    @gridCam.aspect = width / height
+    @gridCam.updateProjectionMatrix()
+
+    @objectCam.position.x = width / 2
+    @objectCam.position.y = 900
+    @objectCam.position.z = height / 2
+    @objectCam.lookAt new THREE.Vector3(
+      width / 2, 0, height / 2
+    )
+    @objectCam.aspect = width / height
+    @objectCam.updateProjectionMatrix()
 
     @renderer.setSize width, height
-    @composer.setSize width, height
+    @gridComposer.setSize width, height
+    @objComposer.setSize width, height
 
     if @fxaa
       @fxaa.uniforms['resolution'].value = new THREE.Vector2(

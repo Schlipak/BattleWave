@@ -158,6 +158,20 @@ Surface = require('src/Surface');
 
 WarpGrid = require('src/WarpGrid');
 
+window.CanvasRenderingContext2D.prototype.polygon = function(x, y, radius, sides) {
+  var angle, i, j, ref;
+  if (sides > 2) {
+    for (i = j = 0, ref = sides; 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
+      angle = (Math.PI * 2 / sides * i) - Math.PI / 2;
+      this.lineTo(Math.cos(angle) * radius + x, Math.sin(angle) * radius + y);
+    }
+    angle = (Math.PI * 2 / sides * sides) - Math.PI / 2;
+    return this.lineTo(Math.cos(angle) * radius + x, Math.sin(angle) * radius + y);
+  } else {
+    return this.arc(x, y, radius, 0, 2 * Math.PI);
+  }
+};
+
 module.exports = BattleWave = (function() {
   function BattleWave(target1) {
     this.target = target1;
@@ -229,6 +243,183 @@ module.exports = Clock = (function() {
 
 });
 
+require.register("src/Drawable.coffee", function(exports, require, module) {
+"use strict";
+var Drawable;
+
+module.exports = Drawable = (function() {
+  function Drawable() {
+    null;
+  }
+
+  Drawable.prototype.draw = function(surface) {
+    return null;
+  };
+
+  return Drawable;
+
+})();
+
+});
+
+require.register("src/Particle.coffee", function(exports, require, module) {
+"usr strict";
+var Particle, Utils;
+
+Utils = require('src/Utils');
+
+module.exports = Particle = (function() {
+  function Particle(x, y, speed, angle) {
+    this.pos = {
+      x: x,
+      y: y
+    };
+    this.velocity = {
+      x: 0,
+      y: 0
+    };
+    this.friction = 0.95;
+    this.vx = 1;
+    this.vy = 1;
+    this.alpha = 1;
+    this.gravity = false;
+    this.color = 'white';
+    this.radius = 2;
+    this.setHeading(angle);
+    this.setSpeed(speed);
+  }
+
+  Particle.prototype.getPos = function() {
+    return this.pos;
+  };
+
+  Particle.prototype.getSpeed = function() {
+    return Math.sqrt(Math.pow(this.velocity.x, 2), Math.pow(this.velocity.y, 2));
+  };
+
+  Particle.prototype.setSpeed = function(speed) {
+    var heading;
+    heading = this.getHeading();
+    this.velocity.x = Math.cos(heading) * speed;
+    return this.velocity.y = Math.sin(heading) * speed;
+  };
+
+  Particle.prototype.getHeading = function() {
+    return Math.atan2(this.velocity.y, this.velocity.x);
+  };
+
+  Particle.prototype.setHeading = function(heading) {
+    var speed;
+    speed = this.getSpeed();
+    this.velocity.x = Math.cos(heading) * speed;
+    return this.velocity.y = Math.sin(heading) * speed;
+  };
+
+  Particle.prototype.angleTo = function(other) {
+    return Math.atan2(other.pos.y - this.pos.y, other.pos.x - this.pos.x);
+  };
+
+  Particle.prototype.draw = function(ctx) {
+    ctx.globalAlpha = this.alpha;
+    ctx.save();
+    ctx.translate(this.pos.x, this.pos.y);
+    ctx.rotate(this.getHeading());
+    ctx.beginPath();
+    ctx.fillStyle = this.color;
+    ctx.polygon(0, 0, Math.min(this.radius * ((Math.abs(this.velocity.x) * Math.abs(this.velocity.y)) / 8), 6), 0);
+    ctx.fill();
+    ctx.restore();
+    return ctx.globalAlpha = 1;
+  };
+
+  Particle.prototype.render = function() {
+    this.update();
+    if (this.spring != null) {
+      return this.updateSpring(this.target);
+    }
+  };
+
+  Particle.prototype.update = function() {
+    this.velocity.x *= this.friction;
+    this.velocity.y *= this.friction;
+    this.pos.x += this.velocity.x;
+    return this.pos.y += this.velocity.y;
+  };
+
+  Particle.prototype.setSpring = function(target) {
+    this.target = target;
+    this.k = 0.1;
+    this.springLength = 0.8;
+    this.friction = 0.90;
+    return this.spring = true;
+  };
+
+  Particle.prototype.updateSpring = function() {
+    var ax, ay, distance, dx, dy, springForce;
+    dx = this.target.pos.x - this.pos.x;
+    dy = this.target.pos.y - this.pos.y;
+    distance = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+    springForce = (distance - this.springLength) * this.k;
+    ax = dx / distance * springForce;
+    ay = dy / distance * springForce;
+    this.velocity.x += ax;
+    return this.velocity.y += ay;
+  };
+
+  Particle.prototype.warp = function(target) {
+    if (Utils.distance(this, target) < target.getSpeed() * 10 && Utils.distance(this, this.target) < 30) {
+      this.setHeading(Utils.getAngle(target, this));
+      if (Utils.distance(this, target) < 70) {
+        return this.setSpeed(target.getSpeed());
+      }
+    }
+  };
+
+  return Particle;
+
+})();
+
+});
+
+require.register("src/Player.coffee", function(exports, require, module) {
+"use strict";
+var Player;
+
+module.exports = Player = (function() {
+  var setupControls;
+
+  function Player(playerNumber) {
+    this.playerNumber = playerNumber;
+    this.pos = {
+      x: 0,
+      y: 0
+    };
+    this.velocity = {
+      x: 0,
+      y: 0
+    };
+    this.friction = 0.9;
+    (setupControls.bind(this))();
+  }
+
+  setupControls = function() {
+    return void 0;
+  };
+
+  Player.prototype.update = function() {
+    return void 0;
+  };
+
+  Player.prototype.draw = function(ctx) {
+    return void 0;
+  };
+
+  return Player;
+
+})();
+
+});
+
 require.register("src/Surface.coffee", function(exports, require, module) {
 "use strict";
 var Surface, WarpGrid;
@@ -239,7 +430,6 @@ module.exports = Surface = (function() {
   var registerResize, resizeScene;
 
   function Surface(target) {
-    var _this;
     this.canvas = document.createElement('CANVAS');
     target.appendChild(this.canvas);
     this.context = this.canvas.getContext('2d');
@@ -249,16 +439,9 @@ module.exports = Surface = (function() {
     (resizeScene.bind(this))(window);
     this.grid = new WarpGrid(this.width(), this.height());
     this.add(this.grid);
-    _this = this;
-    this.canvas.onmousemove = function(e) {
-      var posx, posy;
-      posx = e.clientX;
-      posy = e.clientY;
-      return _this.grid.setWavePoint({
-        originX: posx,
-        originY: posy
-      });
-    };
+    this.vignette = this.context.createRadialGradient(this.width() / 2, this.height() / 2, 100, this.width() / 2, this.height() / 2, this.width() / 2);
+    this.vignette.addColorStop(0, "transparent");
+    this.vignette.addColorStop(1, "rgba(0, 0, 0, .4)");
   }
 
   Surface.prototype.setupComposer = function() {
@@ -282,16 +465,18 @@ module.exports = Surface = (function() {
   };
 
   Surface.prototype.render = function() {
-    var i, len, obj, ref, results;
-    this.context.fillStyle = '#212121';
+    var i, len, obj, ref;
+    this.context.save();
+    this.context.fillStyle = "#20172a";
     this.context.fillRect(0, 0, this.width(), this.height());
     ref = this.objects;
-    results = [];
     for (i = 0, len = ref.length; i < len; i++) {
       obj = ref[i];
-      results.push(obj.draw(this.context));
+      obj.draw(this.context);
     }
-    return results;
+    this.context.restore();
+    this.context.fillStyle = this.vignette;
+    return this.context.fillRect(0, 0, this.width(), this.height());
   };
 
   resizeScene = function(win) {
@@ -317,126 +502,153 @@ module.exports = Surface = (function() {
 
 });
 
+require.register("src/Utils.coffee", function(exports, require, module) {
+"use strict";
+var Utils;
+
+module.exports = Utils = (function() {
+  function Utils() {}
+
+  Utils.norm = function(val, min, max) {
+    return (val - min) / (max - min);
+  };
+
+  Utils.lerp = function(norm, min, max) {
+    return (max - min) * norm + min;
+  };
+
+  Utils.clamp = function(val, min, max) {
+    return Math.min(Math.max(value, max), min);
+  };
+
+  Utils.distance = function(left, right) {
+    var dx, dy;
+    dx = right.pos.x - left.pos.x;
+    dy = right.pos.y - left.pos.y;
+    return Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+  };
+
+  Utils.getAngle = function(left, right) {
+    var dx, dy;
+    dx = right.pos.x - left.pos.x;
+    dy = right.pos.y - left.pos.y;
+    return Math.atan2(dy, dx);
+  };
+
+  return Utils;
+
+})();
+
+});
+
 require.register("src/WarpGrid.coffee", function(exports, require, module) {
 "use strict";
-var WarpGrid;
+var Particle, WarpGrid;
+
+Particle = require('src/Particle');
 
 module.exports = WarpGrid = (function() {
-  var dist;
-
   WarpGrid.GRID_COUNT = 50;
 
   WarpGrid.prototype.type = "WarpGrid";
 
   function WarpGrid(size) {
-    var i, j, ref, ref1, row, x, xcoord, y, ycoord;
-    this.points = [];
+    var _this, i, j, particle, ref, ref1, row, x, y;
+    this.player = {
+      pos: {
+        x: -100,
+        y: -100
+      },
+      previous: {
+        x: -100,
+        y: -100
+      },
+      getSpeed: function() {
+        var dx, dy;
+        dx = this.previous.x - this.pos.x;
+        dy = this.previous.y - this.pos.y;
+        return Math.min(Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2)) / 6, 20);
+      }
+    };
+    this.particles = [];
     for (y = i = 0, ref = WarpGrid.GRID_COUNT; 0 <= ref ? i <= ref : i >= ref; y = 0 <= ref ? ++i : --i) {
       row = [];
       for (x = j = 0, ref1 = WarpGrid.GRID_COUNT; 0 <= ref1 ? j <= ref1 : j >= ref1; x = 0 <= ref1 ? ++j : --j) {
-        xcoord = x * (size / WarpGrid.GRID_COUNT);
-        ycoord = y * (size / WarpGrid.GRID_COUNT);
-        row.push({
-          x: x,
-          y: y,
-          originX: xcoord,
-          originY: ycoord,
-          currentX: xcoord,
-          currentY: ycoord,
-          weight: 0
-        });
+        particle = new Particle(x * (size / WarpGrid.GRID_COUNT), y * (size / WarpGrid.GRID_COUNT), 1, 0);
+        particle.target = {
+          pos: {
+            x: x * (size / WarpGrid.GRID_COUNT),
+            y: y * (size / WarpGrid.GRID_COUNT)
+          }
+        };
+        particle.setSpring(particle.target);
+        particle.k = 0.1;
+        particle.springLength = 0.1;
+        particle.friction = 0.9;
+        particle.radius = .5;
+        particle.color = '#a5d4de';
+        row.push(particle);
       }
-      this.points.push(row);
+      this.particles.push(row);
     }
+    _this = this;
+    window.onmousemove = function(e) {
+      var posx, posy;
+      posx = e.clientX;
+      posy = e.clientY;
+      _this.player.previous.x = _this.player.pos.x;
+      _this.player.previous.y = _this.player.pos.y;
+      _this.player.pos.x = posx;
+      return _this.player.pos.y = posy;
+    };
   }
 
-  dist = function(left, right) {
-    var dx, dy;
-    dx = (right.originX - left.originX) / WarpGrid.GRID_COUNT;
-    dy = (right.originY - left.originY) / WarpGrid.GRID_COUNT;
-    return {
-      dx: dx,
-      dy: dy,
-      dist: Math.sqrt(dx * dx + dy * dy)
-    };
-  };
-
-  WarpGrid.prototype.setWavePoint = function(origin) {
-    var distance, i, len, pt, ref, results, row;
-    ref = this.points;
-    results = [];
-    for (i = 0, len = ref.length; i < len; i++) {
-      row = ref[i];
-      results.push((function() {
-        var j, len1, results1;
-        results1 = [];
-        for (j = 0, len1 = row.length; j < len1; j++) {
-          pt = row[j];
-          distance = dist(origin, pt);
-          pt.weight = 100 - (Math.abs(distance.dist) * 30);
-          if (pt.weight < 0) {
-            results1.push(pt.weight = 0);
-          } else {
-            results1.push(void 0);
-          }
-        }
-        return results1;
-      })());
-    }
-    return results;
-  };
-
-  WarpGrid.computeColor = function(ctx, left, right) {
-    var colLeft, colRight, grad, hue, light;
-    grad = ctx.createLinearGradient(0, 0, right.currentX - left.currentX, right.currentY - left.currentY);
-    hue = Math.round(280 - left.weight);
-    light = 40 + Math.round(left.weight * 0.6);
-    colLeft = tinycolor("hsl(" + hue + ", " + light + "%, " + light + "%)").toHexString();
-    hue = Math.round(280 - right.weight);
-    light = 40 + Math.round(right.weight * 0.6);
-    colRight = tinycolor("hsl(" + hue + ", " + light + "%, " + light + "%)").toHexString();
-    grad.addColorStop(0, colLeft);
-    grad.addColorStop(1, colRight);
-    return grad;
+  WarpGrid.prototype.stopPlayer = function() {
+    this.player.previous.x = 0;
+    this.player.previous.y = 0;
+    this.player.pos.x = 0;
+    return this.player.pos.y = 0;
   };
 
   WarpGrid.prototype.draw = function(ctx) {
-    var i, j, k, len, len1, previous, pt, ref, ref1, results, row, x, y;
-    ctx.lineWidth = 1;
-    ref = this.points;
-    for (i = 0, len = ref.length; i < len; i++) {
-      row = ref[i];
-      previous = row[0];
-      for (j = 0, len1 = row.length; j < len1; j++) {
-        pt = row[j];
-        ctx.strokeStyle = WarpGrid.computeColor(ctx, previous, pt);
-        ctx.beginPath();
-        ctx.moveTo(previous.currentX, previous.currentY);
-        if (pt === previous) {
-          continue;
-        }
-        ctx.lineTo(pt.currentX, pt.currentY);
-        ctx.stroke();
-        previous = pt;
-      }
-    }
+    var bottom, i, particle, ref, results, right, x, y;
     results = [];
-    for (x = k = 0, ref1 = WarpGrid.GRID_COUNT; 0 <= ref1 ? k <= ref1 : k >= ref1; x = 0 <= ref1 ? ++k : --k) {
-      previous = this.points[0][x];
+    for (y = i = 0, ref = WarpGrid.GRID_COUNT; 0 <= ref ? i <= ref : i >= ref; y = 0 <= ref ? ++i : --i) {
       results.push((function() {
-        var l, ref2, results1;
+        var j, ref1, results1;
         results1 = [];
-        for (y = l = 0, ref2 = WarpGrid.GRID_COUNT; 0 <= ref2 ? l <= ref2 : l >= ref2; y = 0 <= ref2 ? ++l : --l) {
-          pt = this.points[y][x];
-          if (pt === previous) {
-            continue;
+        for (x = j = 0, ref1 = WarpGrid.GRID_COUNT; 0 <= ref1 ? j <= ref1 : j >= ref1; x = 0 <= ref1 ? ++j : --j) {
+          particle = this.particles[y][x];
+          right = null;
+          if (x + 1 <= WarpGrid.GRID_COUNT) {
+            right = this.particles[y][x + 1];
           }
-          ctx.strokeStyle = WarpGrid.computeColor(ctx, previous, pt);
-          ctx.beginPath();
-          ctx.moveTo(previous.currentX, previous.currentY);
-          ctx.lineTo(pt.currentX, pt.currentY);
-          ctx.stroke();
-          results1.push(previous = pt);
+          bottom = null;
+          if (y + 1 <= WarpGrid.GRID_COUNT) {
+            bottom = this.particles[y + 1][x];
+          }
+          ctx.lineWidth = 1;
+          ctx.globalAlpha = 0.1 + particle.getSpeed();
+          ctx.strokeStyle = '#2980b9';
+          if (right != null) {
+            ctx.beginPath();
+            ctx.moveTo(particle.pos.x, particle.pos.y);
+            ctx.lineTo(right.pos.x, right.pos.y);
+            ctx.closePath();
+            ctx.stroke();
+          }
+          if (bottom != null) {
+            ctx.beginPath();
+            ctx.moveTo(particle.pos.x, particle.pos.y);
+            ctx.lineTo(bottom.pos.x, bottom.pos.y);
+            ctx.closePath();
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = 'white';
+          particle.draw(ctx);
+          particle.render();
+          results1.push(particle.warp(this.player));
         }
         return results1;
       }).call(this));

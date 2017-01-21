@@ -16,14 +16,16 @@ module.exports = class Surface
     @grid = new WarpGrid(@width(), @height())
     @add(@grid)
 
-    _this = @
-    @canvas.onmousemove = (e) ->
-      posx = e.clientX
-      posy = e.clientY
-      _this.grid.setWavePoint({
-        originX: posx,
-        originY: posy
-      })
+    @vignette = @context.createRadialGradient(
+      @width() / 2,
+      @height() / 2,
+      100,
+      @width() / 2,
+      @height() / 2,
+      @width() / 2
+    );
+    @vignette.addColorStop(0, "transparent")
+    @vignette.addColorStop(1, "rgba(0, 0, 0, .4)")
 
   setupComposer: () ->
     console.log '[Surface] Setting up composer'
@@ -40,10 +42,15 @@ module.exports = class Surface
   add: (obj) -> @objects.push obj
 
   render: () ->
-    @context.fillStyle = '#212121'
+    @context.save()
+    @context.fillStyle = "#20172a"
     @context.fillRect(0, 0, @width(), @height())
     for obj in @objects
       obj.draw @context
+    @context.restore()
+
+    @context.fillStyle = @vignette
+    @context.fillRect 0, 0, @width(), @height()
 
   resizeScene = (win) ->
     console.log '[Surface] Resizing'

@@ -1,6 +1,7 @@
 "use strict"
 
 Clock = require 'src/Clock'
+Wave  = require 'src/Wave'
 
 module.exports = class Player
   MARGIN  = 80
@@ -16,11 +17,13 @@ module.exports = class Player
   KEYBOARD = [
     {
       moveUp: [90, 87],
-      moveDown: [83]
+      moveDown: [83],
+      wave: [68]
     },
     {
       moveUp: [38],
-      moveDown: [40]
+      moveDown: [40],
+      wave: [37]
     }
   ]
 
@@ -34,12 +37,20 @@ module.exports = class Player
     else
       @pos.x = window.innerWidth - MARGIN
     @velocity = {x: 0, y: 0}
-    @friction = 20
+    @friction = 0.1
     @angle = 0
     @colors = COLORS
     if @playerNumber == 2
       @colors = Object.create(COLORS).reverse()
-    @clock = new Clock()
+    @drawClock = new Clock()
+    @cooldown = new Clock()
+
+    @waves = []
+    for i in [0..10]
+      @waves.push new Wave(0, 0)
+
+  getSpeed: () ->
+    Math.abs(@velocity.y / 100)
 
   moveUp: () ->
     @velocity.y -= 50
@@ -48,6 +59,14 @@ module.exports = class Player
   moveDown: () ->
     @velocity.y += 50
     @velocity.y = 400 if @velocity.y > 400
+
+  wave: () ->
+    return if @cooldown.getElapsedTime() < 2
+    @cooldown.deltaTime()
+    for wave in @waves
+      unless wave.alive
+        wave.originateFrom(@).shootTo(@playerNumber)
+        break
 
   update: () ->
     kb = window.$keyboard
@@ -60,6 +79,7 @@ module.exports = class Player
   hasKeyPressed: () ->
     for dir of KEYBOARD[@playerNumber - 1]
       for key in KEYBOARD[@playerNumber - 1][dir]
+        continue if dir == 'wave'
         return true if window.$keyboard[key]
     false
 
@@ -68,7 +88,7 @@ module.exports = class Player
     @pos.y = window.innerHeight - MARGIN if @pos.y > window.innerHeight - MARGIN
 
   draw: (ctx) ->
-    timeSinceLastFrame = @clock.deltaTime()
+    timeSinceLastFrame = @drawClock.deltaTime()
 
     @angle += (Math.PI / 5) * timeSinceLastFrame
     @angle = @angle % (2 * Math.PI)
@@ -96,3 +116,6 @@ module.exports = class Player
       ctx.stroke()
       ctx.restore()
     ctx.restore()
+
+    for wave in @waves
+      wave.draw()

@@ -256,6 +256,13 @@ module.exports = Clock = (function() {
     return (new Date()).getTime();
   };
 
+  Clock.prototype.getElapsedTime = function() {
+    var delta, now;
+    now = getCurrentTime();
+    delta = now - this.time;
+    return delta / 1000;
+  };
+
   return Clock;
 
 })();
@@ -402,9 +409,11 @@ module.exports = Particle = (function() {
 
 require.register("src/Player.coffee", function(exports, require, module) {
 "use strict";
-var Clock, Player;
+var Clock, Player, Wave;
 
 Clock = require('src/Clock');
+
+Wave = require('src/Wave');
 
 module.exports = Player = (function() {
   var COLORS, KEYBOARD, MARGIN, SIZE;
@@ -418,14 +427,17 @@ module.exports = Player = (function() {
   KEYBOARD = [
     {
       moveUp: [90, 87],
-      moveDown: [83]
+      moveDown: [83],
+      wave: [68]
     }, {
       moveUp: [38],
-      moveDown: [40]
+      moveDown: [40],
+      wave: [37]
     }
   ];
 
   function Player(playerNumber) {
+    var i, j;
     this.playerNumber = playerNumber;
     this.pos = {
       x: 0,
@@ -440,14 +452,23 @@ module.exports = Player = (function() {
       x: 0,
       y: 0
     };
-    this.friction = 20;
+    this.friction = 0.1;
     this.angle = 0;
     this.colors = COLORS;
     if (this.playerNumber === 2) {
       this.colors = Object.create(COLORS).reverse();
     }
-    this.clock = new Clock();
+    this.drawClock = new Clock();
+    this.cooldown = new Clock();
+    this.waves = [];
+    for (i = j = 0; j <= 10; i = ++j) {
+      this.waves.push(new Wave(0, 0));
+    }
   }
+
+  Player.prototype.getSpeed = function() {
+    return Math.abs(this.velocity.y / 100);
+  };
 
   Player.prototype.moveUp = function() {
     this.velocity.y -= 50;
@@ -461,6 +482,26 @@ module.exports = Player = (function() {
     if (this.velocity.y > 400) {
       return this.velocity.y = 400;
     }
+  };
+
+  Player.prototype.wave = function() {
+    var j, len, ref, results, wave;
+    if (this.cooldown.getElapsedTime() < 2) {
+      return;
+    }
+    this.cooldown.deltaTime();
+    ref = this.waves;
+    results = [];
+    for (j = 0, len = ref.length; j < len; j++) {
+      wave = ref[j];
+      if (!wave.alive) {
+        wave.originateFrom(this).shootTo(this.playerNumber);
+        break;
+      } else {
+        results.push(void 0);
+      }
+    }
+    return results;
   };
 
   Player.prototype.update = function() {
@@ -493,6 +534,9 @@ module.exports = Player = (function() {
       ref = KEYBOARD[this.playerNumber - 1][dir];
       for (j = 0, len = ref.length; j < len; j++) {
         key = ref[j];
+        if (dir === 'wave') {
+          continue;
+        }
         if (window.$keyboard[key]) {
           return true;
         }
@@ -511,8 +555,8 @@ module.exports = Player = (function() {
   };
 
   Player.prototype.draw = function(ctx) {
-    var i, j, ref, timeSinceLastFrame;
-    timeSinceLastFrame = this.clock.deltaTime();
+    var i, j, k, len, ref, ref1, results, timeSinceLastFrame, wave;
+    timeSinceLastFrame = this.drawClock.deltaTime();
     this.angle += (Math.PI / 5) * timeSinceLastFrame;
     this.angle = this.angle % (2 * Math.PI);
     this.update();
@@ -538,7 +582,14 @@ module.exports = Player = (function() {
       ctx.stroke();
       ctx.restore();
     }
-    return ctx.restore();
+    ctx.restore();
+    ref1 = this.waves;
+    results = [];
+    for (k = 0, len = ref1.length; k < len; k++) {
+      wave = ref1[k];
+      results.push(wave.draw());
+    }
+    return results;
   };
 
   return Player;
@@ -564,7 +615,6 @@ module.exports = Surface = (function() {
     (registerResize.bind(this))();
     (resizeScene.bind(this))(window);
     this.grid = new WarpGrid(this.width(), this.height());
-    this.add(this.grid);
     this.vignette = this.context.createRadialGradient(this.width() / 2, this.height() / 2, 100, this.width() / 2, this.height() / 2, this.width() / 2);
     this.vignette.addColorStop(0, "transparent");
     this.vignette.addColorStop(1, "rgba(0, 0, 0, .4)");
@@ -591,6 +641,7 @@ module.exports = Surface = (function() {
     this.context.save();
     this.context.fillStyle = "#20172a";
     this.context.fillRect(0, 0, this.width(), this.height());
+    this.grid.draw(this.context, this.objects);
     ref = this.objects;
     for (i = 0, len = ref.length; i < len; i++) {
       obj = ref[i];
@@ -676,7 +727,7 @@ module.exports = WarpGrid = (function() {
 
   function WarpGrid(size) {
     var _this, i, j, particle, ref, ref1, row, x, y;
-    this.player = {
+    this.mouse = {
       pos: {
         x: -100,
         y: -100
@@ -704,9 +755,9 @@ module.exports = WarpGrid = (function() {
           }
         };
         particle.setSpring(particle.target);
-        particle.k = 0.1;
+        particle.k = 0.01;
         particle.springLength = 0.1;
-        particle.friction = 0.9;
+        particle.friction = 0.7;
         particle.radius = .5;
         particle.color = '#a5d4de';
         row.push(particle);
@@ -718,22 +769,22 @@ module.exports = WarpGrid = (function() {
       var posx, posy;
       posx = e.clientX;
       posy = e.clientY;
-      _this.player.previous.x = _this.player.pos.x;
-      _this.player.previous.y = _this.player.pos.y;
-      _this.player.pos.x = posx;
-      return _this.player.pos.y = posy;
+      _this.mouse.previous.x = _this.mouse.pos.x;
+      _this.mouse.previous.y = _this.mouse.pos.y;
+      _this.mouse.pos.x = posx;
+      return _this.mouse.pos.y = posy;
     };
   }
 
   WarpGrid.prototype.stopPlayer = function() {
-    this.player.previous.x = 0;
-    this.player.previous.y = 0;
-    this.player.pos.x = 0;
-    return this.player.pos.y = 0;
+    this.mouse.previous.x = 0;
+    this.mouse.previous.y = 0;
+    this.mouse.pos.x = 0;
+    return this.mouse.pos.y = 0;
   };
 
-  WarpGrid.prototype.draw = function(ctx) {
-    var bottom, i, particle, ref, results, right, x, y;
+  WarpGrid.prototype.draw = function(ctx, objs) {
+    var bottom, hue, i, obj, particle, ref, results, right, wave, x, y;
     results = [];
     for (y = i = 0, ref = WarpGrid.GRID_COUNT; 0 <= ref ? i <= ref : i >= ref; y = 0 <= ref ? ++i : --i) {
       results.push((function() {
@@ -751,7 +802,8 @@ module.exports = WarpGrid = (function() {
           }
           ctx.lineWidth = 1;
           ctx.globalAlpha = 0.1 + particle.getSpeed();
-          ctx.strokeStyle = '#2980b9';
+          hue = (220 + particle.getSpeed() * 20) % 360;
+          ctx.strokeStyle = "hsl(" + hue + ", 50%, 50%)";
           if (right != null) {
             ctx.beginPath();
             ctx.moveTo(particle.pos.x, particle.pos.y);
@@ -770,7 +822,29 @@ module.exports = WarpGrid = (function() {
           ctx.fillStyle = 'white';
           particle.draw(ctx);
           particle.render();
-          results1.push(particle.warp(this.player));
+          results1.push((function() {
+            var k, len, results2;
+            results2 = [];
+            for (k = 0, len = objs.length; k < len; k++) {
+              obj = objs[k];
+              particle.warp(obj);
+              if (obj.waves) {
+                results2.push((function() {
+                  var l, len1, ref2, results3;
+                  ref2 = obj.waves;
+                  results3 = [];
+                  for (l = 0, len1 = ref2.length; l < len1; l++) {
+                    wave = ref2[l];
+                    results3.push(particle.warp(wave));
+                  }
+                  return results3;
+                })());
+              } else {
+                results2.push(void 0);
+              }
+            }
+            return results2;
+          })());
         }
         return results1;
       }).call(this));
@@ -779,6 +853,79 @@ module.exports = WarpGrid = (function() {
   };
 
   return WarpGrid;
+
+})();
+
+});
+
+require.register("src/Wave.coffee", function(exports, require, module) {
+"use strict";
+var Clock, Wave;
+
+Clock = require('src/Clock');
+
+module.exports = Wave = (function() {
+  var WAVE_SPEED;
+
+  WAVE_SPEED = 1000;
+
+  function Wave(x, y) {
+    this.pos = {
+      x: x,
+      y: y
+    };
+    this.velocity = {
+      x: 0,
+      y: 0
+    };
+    this.alive = false;
+    this.clock = new Clock();
+  }
+
+  Wave.prototype.originateFrom = function(origin) {
+    this.pos.x = origin.pos.x;
+    this.pos.y = origin.pos.y;
+    this.velocity.y = origin.velocity.y / 5;
+    return this;
+  };
+
+  Wave.prototype.shootTo = function(direction) {
+    this.alive = true;
+    this.velocity.x = WAVE_SPEED;
+    if (direction === 2) {
+      this.velocity.x = -this.velocity.x;
+    }
+    return this;
+  };
+
+  Wave.prototype.getSpeed = function() {
+    if (!this.alive) {
+      return 0;
+    }
+    return 10;
+  };
+
+  Wave.prototype.draw = function() {
+    var timeSinceLastFrame;
+    timeSinceLastFrame = this.clock.deltaTime();
+    if (!this.alive) {
+      return;
+    }
+    this.pos.x += this.velocity.x * timeSinceLastFrame;
+    this.pos.y += this.velocity.y * (timeSinceLastFrame * 10);
+    if (this.pos.y <= 0 || this.pos.y >= window.innerHeight) {
+      this.velocity.y = -this.velocity.y;
+    }
+    if (this.pos.x < 0 || this.pos.x > window.innerWidth) {
+      this.alive = false;
+      return this.velocity = {
+        x: 0,
+        y: 0
+      };
+    }
+  };
+
+  return Wave;
 
 })();
 

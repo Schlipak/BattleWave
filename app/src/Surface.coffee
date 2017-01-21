@@ -13,7 +13,6 @@ module.exports = class Surface
     (resizeScene.bind(@))(window)
 
     @grid = new WarpGrid(@width(), @height())
-    @add(@grid)
 
     @vignette = @context.createRadialGradient(
       @width() / 2,
@@ -42,6 +41,7 @@ module.exports = class Surface
     @context.save()
     @context.fillStyle = "#20172a"
     @context.fillRect(0, 0, @width(), @height())
+    @grid.draw @context, @objects
     for obj in @objects
       obj.draw @context
     @context.restore()

@@ -12,3 +12,8 @@ module.exports = class Clock
 
   getCurrentTime = () ->
     (new Date()).getTime()
+
+  getElapsedTime: () ->
+    now   = getCurrentTime()
+    delta = now - @time
+    delta / 1000

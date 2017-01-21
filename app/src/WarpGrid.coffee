@@ -8,7 +8,7 @@ module.exports = class WarpGrid
   type: "WarpGrid"
 
   constructor: (size) ->
-    @player = {
+    @mouse = {
       pos: {
         x: -100,
         y: -100
@@ -41,9 +41,9 @@ module.exports = class WarpGrid
           }
         }
         particle.setSpring(particle.target)
-        particle.k = 0.1
+        particle.k = 0.01
         particle.springLength = 0.1
-        particle.friction = 0.9
+        particle.friction = 0.7
         particle.radius = .5
         particle.color = '#a5d4de'
         row.push particle
@@ -53,18 +53,18 @@ module.exports = class WarpGrid
     window.onmousemove = (e) ->
       posx = e.clientX
       posy = e.clientY
-      _this.player.previous.x = _this.player.pos.x
-      _this.player.previous.y = _this.player.pos.y
-      _this.player.pos.x = posx
-      _this.player.pos.y = posy
+      _this.mouse.previous.x = _this.mouse.pos.x
+      _this.mouse.previous.y = _this.mouse.pos.y
+      _this.mouse.pos.x = posx
+      _this.mouse.pos.y = posy
 
   stopPlayer: () ->
-    @player.previous.x = 0
-    @player.previous.y = 0
-    @player.pos.x = 0
-    @player.pos.y = 0
+    @mouse.previous.x = 0
+    @mouse.previous.y = 0
+    @mouse.pos.x = 0
+    @mouse.pos.y = 0
 
-  draw: (ctx) ->
+  draw: (ctx, objs) ->
     for y in [0..WarpGrid.GRID_COUNT]
       for x in [0..WarpGrid.GRID_COUNT]
         particle = @particles[y][x]
@@ -79,11 +79,9 @@ module.exports = class WarpGrid
 
         ctx.lineWidth = 1
         ctx.globalAlpha = 0.1 + particle.getSpeed()
-        ctx.strokeStyle = '#2980b9'
 
-        # color = tinycolor('hsl(220, 50%, 50%)').toHsl()
-        # color.h += particle.getSpeed() * 10
-        # ctx.strokeStyle = tinycolor(color).toHexString()
+        hue = (220 + particle.getSpeed() * 20) % 360
+        ctx.strokeStyle = "hsl(#{hue}, 50%, 50%)"
 
         if right?
           ctx.beginPath()
@@ -102,6 +100,11 @@ module.exports = class WarpGrid
         ctx.globalAlpha = 1
         ctx.fillStyle = 'white'
 
-        particle.draw(ctx)
+        particle.draw ctx
         particle.render()
-        particle.warp(@player)
+        for obj in objs
+          particle.warp obj
+          if obj.waves
+            for wave in obj.waves
+              particle.warp wave
+        # particle.warp @mouse

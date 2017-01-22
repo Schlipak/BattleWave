@@ -7,12 +7,13 @@ Utils = require 'src/Utils'
 module.exports = class Player
   MARGIN  = 60
   SIZE    = 50
+  MAX_SPEED = 600
   COLORS = [
-    "#8e44ad",
-    "#7755b8",
-    "#6166c4",
-    "#4a77cf",
-    "#3489db"
+    "#ab52d1",
+    "#8a62d7",
+    "#6e74df",
+    "#5183e4",
+    "#3897f2"
   ]
 
   KEYBOARD = [
@@ -87,14 +88,14 @@ module.exports = class Player
 
   moveUp: () ->
     @velocity.y -= 50
-    @velocity.y = -400 if @velocity.y < -400
+    @velocity.y = -MAX_SPEED if @velocity.y < -MAX_SPEED
 
   moveDown: () ->
     @velocity.y += 50
-    @velocity.y = 400 if @velocity.y > 400
+    @velocity.y = MAX_SPEED if @velocity.y > MAX_SPEED
 
   wave: () ->
-    return if @cooldown.getElapsedTime() < 1.5
+    return if @cooldown.getElapsedTime() < 1
     @cooldown.deltaTime()
     for wave in @waves
       unless wave.alive

@@ -24,8 +24,11 @@ window.CanvasRenderingContext2D.prototype.polygon = (x, y, radius, sides) ->
 module.exports = class BattleWave
   constructor: (@target) ->
     @clock    = new Clock()
-    @surface  = new Surface(@target)
+    @surface  = new Surface(@target, @)
     @loopId   = null
+    @audio    = null
+    @crtOff   = new Audio('../sfx/crt_off.ogg')
+    @crtOff.crossOrigin = "anonymous"
 
     @playerOne = new Player(1)
     @playerTwo = new Player(2)
@@ -41,6 +44,9 @@ module.exports = class BattleWave
 
   start: () ->
     console.log '[BattleWave] Starting'
+    @audio = new Audio('../bgm/bgm.ogg')
+    @audio.crossOrigin = "anonymous"
+    @audio.play()
     @loopId = requestAnimationFrame(@gameLoop.bind(@))
 
   stop: () ->

@@ -24,6 +24,7 @@ html, body {
   padding: 0;
   margin: 0;
   overflow: hidden;
+  background: #111;
 }
 
 #target {
@@ -31,6 +32,54 @@ html, body {
   position: relative;
   width: 100%;
   height: 100%;
+
+  animation-name: crtIn;
+  animation-duration: .4s;
+  animation-delay: 0s;
+  animation-fill-mode: forwards;
+  animation-timing-function: linear;
+  animation-iteration-count: 1;
+
+  filter: brightness(100%) grayscale(0%);
+}
+
+#target:after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+
+  background: -webkit-linear-gradient(top, transparent 0%, rgba(0,0,0,0.4) 100%);
+  background: -moz-linear-gradient(top, transparent 0%, rgba(0,0,0,0.4) 100%);
+  background: -o-linear-gradient(top, transparent 0%, rgba(0,0,0,0.4) 100%);
+  background: -ms-linear-gradient(top, transparent 0%, rgba(0,0,0,0.4) 100%);
+  background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 100%);
+  -webkit-background-size: 100% 4px;
+  -moz-background-size: 100% 4px;
+  background-size: 100% 4px;
+  background-repeat: repeat;
+
+  pointer-events: none;
+  z-index: 999;
+
+  animation-name: flicker;
+  animation-duration: .1s;
+  animation-delay: 0s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+#target.off {
+  animation-name: crtOut;
+  animation-duration: .4s;
+  animation-delay: 0s;
+  animation-fill-mode: forwards;
+  animation-timing-function: cubic-bezier(0.230, 1.000, 0.320, 1.000);
+  animation-iteration-count: 1;
+  filter: brightness(100%) grayscale(0%);
 }
 
 #target > canvas {
@@ -40,12 +89,112 @@ html, body {
   height: 100%;
 }
 
+#message {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scaleX(0);
+  font-size: 14vh;
+  width: 67vh;
+  opacity: 0;
+
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  pointer-events: none;
+
+  transition: transform .4s, opacity .4s;
+
+  z-index: 900;
+}
+
+#message.visible {
+  transform: translate(-50%, -50%) scaleX(1);
+  opacity: 1;
+}
+
+#message:before {
+  content: '';
+  display: block;
+  position: absolute;
+
+  top: 0;
+  left: 0;
+
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 40vh 70vh 20vh 0;
+  border-color: transparent #34a5cf transparent transparent;
+  transform: translate(-8vh, -12vh) scale(1.05);
+  filter: blur(20px);
+
+  z-index: -1;
+}
+
+#message:after {
+  content: '';
+  display: block;
+  position: absolute;
+
+  top: 0;
+  left: 0;
+
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 40vh 70vh 20vh 0;
+  border-color: transparent #28052f transparent transparent;
+  transform: translate(-8vh, -12vh);
+
+  z-index: -1;
+}
+
+#message > span {
+  display: block;
+}
+
+#message > span.two {
+  font-family: "Yellowtail", sans-serif;
+  line-height: 1em;
+  color: #af2599;
+  text-shadow: 2px 2px 0 #e4bbf0,
+              0 0 20px rgba(210, 47, 183, 1);
+  transform: scale(1.25) rotateZ(-16deg);
+}
+
+#message > span.one, #message > span.three {
+  font-family: "Orbitron", sans-serif;
+  font-weight: 700;
+  color: transparent;
+
+  background: -webkit-linear-gradient(top, #151C60, #C6CBF5 40%, black 40%, #E1A0CE 65%, white);
+  background: -moz-linear-gradient(top, #151C60, #C6CBF5 40%, black 40%, #E1A0CE 65%, white);
+  background: -o-linear-gradient(top, #151C60, #C6CBF5 40%, black 40%, #E1A0CE 65%, white);
+  background: -ms-linear-gradient(top, #151C60, #C6CBF5 40%, black 40%, #E1A0CE 65%, white);
+  background: linear-gradient(to bottom, #151C60, #C6CBF5 40%, black 40%, #E1A0CE 65%, white);
+
+  background-clip: text;
+  -moz-background-clip: text;
+  -webkit-background-clip: text;
+
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke-width: 3px;
+  -webkit-text-stroke-color: white;
+}
+
 #gui {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
@@ -107,6 +256,15 @@ html, body {
   z-index: 0;
 }
 
+@keyframes flicker {
+  from {
+    opacity: .7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes burnout {
   from {
     opacity: .8;
@@ -137,5 +295,44 @@ html, body {
   }
   to {
     opacity: 0;
+  }
+}
+
+@keyframes crtIn {
+  from {
+    transform: scale(0, 0);
+    filter: brightness(500%) grayscale(100%);
+
+  }
+  50% {
+    transform: scale(.01, .01);
+    filter: brightness(500%) grayscale(100%);
+  }
+  99% {
+    transform: scale(.8, .01);
+    filter: brightness(500%) grayscale(100%);
+  }
+  to {
+    transform: scale(1, 1);
+    filter: brightness(100%) grayscale(0%);
+  }
+}
+
+@keyframes crtOut {
+  from {
+    transform: scale(1, 1);
+    filter: brightness(100%) grayscale(0%);
+  }
+  50% {
+    transform: scale(.8, .01);
+    filter: brightness(500%) grayscale(100%);
+  }
+  99% {
+    transform: scale(.01, .01);
+    filter: brightness(500%) grayscale(100%);
+  }
+  to {
+    transform: scale(0, 0);
+    filter: brightness(500%) grayscale(100%);
   }
 }

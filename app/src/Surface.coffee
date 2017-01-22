@@ -2,8 +2,27 @@
 
 WarpGrid  = require 'src/WarpGrid'
 Clock     = require 'src/Clock'
+Utils     = require 'src/Utils'
 
 module.exports = class Surface
+  WIN_MESSAGES = [
+    "WINS",
+    "KILLED IT",
+    "ROCKS",
+    "IS RAD",
+    "IS DOPE",
+    "IS KICKIN'"
+  ]
+
+  TIE_MESSAGES = [
+    ["NICE", "PLAY", "SHAKESPEARE"],
+    ["LIKE,", "OH MY", "GOD!"],
+    ["EAT", "MY", "SHORTS"],
+    ["WELL AINT", "THAT JUST", "GREAT"],
+    ["YA BUNCH", "OF", "HOSERS"],
+    ["OH", "MY,", "DAYUM!"]
+  ]
+
   constructor: (@target, @gameInstance) ->
     @canvas = document.createElement 'CANVAS'
     @target.appendChild @canvas
@@ -65,17 +84,18 @@ module.exports = class Surface
     lineTwo = @message.getElementsByClassName('two')[0]
     lineThree = @message.getElementsByClassName('three')[0]
     if @playerOne.dead and @playerTwo.dead
-      lineOne.innerHTML = "IT'S"
-      lineTwo.innerHTML = "A"
-      lineThree.innerHTML = "TIE"
+      msg = Utils.randomElement(TIE_MESSAGES)
+      lineOne.innerHTML = msg[0]
+      lineTwo.innerHTML = msg[1]
+      lineThree.innerHTML = msg[2]
     else if @playerOne.dead
       lineOne.innerHTML = "PLAYER"
       lineTwo.innerHTML = "TWO"
-      lineThree.innerHTML = "WINS"
+      lineThree.innerHTML = Utils.randomElement(WIN_MESSAGES)
     else
       lineOne.innerHTML = "PLAYER"
       lineTwo.innerHTML = "ONE"
-      lineThree.innerHTML = "WINS"
+      lineThree.innerHTML = Utils.randomElement(WIN_MESSAGES)
     @message.classList.add 'visible'
     _this = @
     window.addEventListener 'keydown', (e) ->

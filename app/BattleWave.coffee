@@ -27,8 +27,12 @@ module.exports = class BattleWave
     @surface  = new Surface(@target, @)
     @loopId   = null
     @audio    = null
+
     @crtOff   = new Audio('../sfx/crt_off.ogg')
     @crtOff.crossOrigin = "anonymous"
+
+    @crtOn    = new Audio('../sfx/crt_on.ogg')
+    @crtOn.crossOrigin = "anonymous"
 
     @playerOne = new Player(1)
     @playerTwo = new Player(2)
@@ -46,7 +50,8 @@ module.exports = class BattleWave
     console.log '[BattleWave] Starting'
     @audio = new Audio('../bgm/bgm.ogg')
     @audio.crossOrigin = "anonymous"
-    @audio.play()
+    # @audio.play()
+    @crtOn.play()
     @loopId = requestAnimationFrame(@gameLoop.bind(@))
 
   stop: () ->

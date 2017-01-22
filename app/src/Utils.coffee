@@ -26,3 +26,8 @@ module.exports = class Utils
       (colliderOne.pos.y - colliderTwo.pos.y) ** 2
     )
     return deltaRadii < centerDist and centerDist < sumRadii
+
+  @randomElement: (array) ->
+    len = array.length
+    rand = Math.floor(Math.random() * len)
+    array[rand]

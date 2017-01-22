@@ -33,6 +33,8 @@ html, body {
   width: 100%;
   height: 100%;
 
+  cursor: none;
+
   animation-name: crtIn;
   animation-duration: .4s;
   animation-delay: 0s;
@@ -99,7 +101,7 @@ html, body {
   left: 50%;
   transform: translate(-50%, -50%) scaleX(0);
   font-size: 14vh;
-  width: 67vh;
+  width: 100vh;
   opacity: 0;
 
   -webkit-touch-callout: none;
@@ -132,7 +134,7 @@ html, body {
   border-style: solid;
   border-width: 40vh 70vh 20vh 0;
   border-color: transparent #34a5cf transparent transparent;
-  transform: translate(-8vh, -12vh) scale(1.05);
+  transform: translate(4vh, -12vh) scale(1.05);
   filter: blur(20px);
 
   z-index: -1;
@@ -151,7 +153,7 @@ html, body {
   border-style: solid;
   border-width: 40vh 70vh 20vh 0;
   border-color: transparent #28052f transparent transparent;
-  transform: translate(-8vh, -12vh);
+  transform: translate(4vh, -12vh);
 
   z-index: -1;
 }

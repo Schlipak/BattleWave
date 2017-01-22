@@ -17,3 +17,12 @@ module.exports = class Utils
     dx = right.pos.x - left.pos.x
     dy = right.pos.y - left.pos.y
     Math.atan2(dy, dx)
+
+  @intersects: (colliderOne, colliderTwo) ->
+    deltaRadii = (colliderOne.radius - colliderTwo.radius) ** 2
+    sumRadii = (colliderOne.radius + colliderTwo.radius) ** 2
+    centerDist = (
+      (colliderOne.pos.x - colliderTwo.pos.x) ** 2 +
+      (colliderOne.pos.y - colliderTwo.pos.y) ** 2
+    )
+    return deltaRadii < centerDist and centerDist < sumRadii

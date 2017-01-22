@@ -31,7 +31,7 @@ module.exports = class Wave
   getHitbox: () ->
     {
       pos: @pos,
-      radius: 50
+      radius: 40
     }
 
   draw: () ->

@@ -9,10 +9,20 @@ module.exports = class Surface
     @context = @canvas.getContext '2d'
 
     @objects = []
+    @playerOne = null
+    @playerTwo = null
+
     (registerResize.bind(@))()
     (resizeScene.bind(@))(window)
 
     @grid = new WarpGrid(@width(), @height())
+
+    @background = @context.createLinearGradient(
+      0, @height() / 2,
+      @width(), @height() / 2
+    )
+    @background.addColorStop(0, "#011022")
+    @background.addColorStop(1, "#250824")
 
     @vignette = @context.createRadialGradient(
       @width() / 2,
@@ -39,9 +49,9 @@ module.exports = class Surface
 
   render: () ->
     @context.save()
-    @context.fillStyle = "#20172a"
+    @context.fillStyle = @background
     @context.fillRect(0, 0, @width(), @height())
-    @grid.draw @context, @objects
+    @grid.draw @context, @playerOne, @playerTwo
     for obj in @objects
       obj.draw @context
     @context.restore()

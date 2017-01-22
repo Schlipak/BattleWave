@@ -31,6 +31,8 @@ module.exports = class BattleWave
     @playerTwo = new Player(2)
     @surface.add(@playerOne)
     @surface.add(@playerTwo)
+    @surface.playerOne = @playerOne
+    @surface.playerTwo = @playerTwo
 
     keyboard = []
     window.$keyboard = keyboard

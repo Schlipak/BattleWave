@@ -50,7 +50,7 @@ module.exports = class BattleWave
     console.log '[BattleWave] Starting'
     @audio = new Audio('../bgm/bgm.ogg')
     @audio.crossOrigin = "anonymous"
-    # @audio.play()
+    @audio.play()
     @crtOn.play()
     @loopId = requestAnimationFrame(@gameLoop.bind(@))
 

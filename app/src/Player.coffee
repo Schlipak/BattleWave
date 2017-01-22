@@ -52,11 +52,21 @@ module.exports = class Player
     @isHit = false
     @dead = false
     @gui = document.querySelector ".hp.#{@getClass()}"
-
     @deadSpeed = 300
+
+    @hitAudio = new Audio('../sfx/hit.ogg')
+    @hitAudio.crossOrigin = "anonymous"
+    @hitAudio.volume = 0.3
+
+    @deadAudio = new Audio('../sfx/dead.ogg')
+    @deadAudio.crossOrigin = "anonymous"
+    @deadAudio.volume = 0.4
 
     @hp = 5
 
+    @waveAudio = new Audio('../sfx/wave.ogg')
+    @waveAudio.crossOrigin = "anonymous"
+    @waveAudio.volume = 0.4
     @waves = []
     for i in [0..10]
       @waves.push new Wave(0, 0)
@@ -79,6 +89,10 @@ module.exports = class Player
     return if @isHit and @immunityClock.getElapsedTime() < 2
     @hp -= 1
     @dead = @hp <= 0
+    if @dead
+      @deadAudio.play()
+    else
+      @hitAudio.play()
     console.log "Aww! Only #{@hp} HP left"
     @immunityClock.deltaTime()
     @isHit = true
@@ -100,6 +114,7 @@ module.exports = class Player
     for wave in @waves
       unless wave.alive
         wave.originateFrom(@).shootTo(@playerNumber)
+        @waveAudio.play()
         break
 
   update: () ->
